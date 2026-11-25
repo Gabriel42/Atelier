@@ -1,0 +1,32 @@
+# CLAUDE.md
+
+How we work on **Atelier**, Gabriel's gamedev workshop: tools, skills and starter
+pieces shared by his games. See `README.md` for what each tool does.
+
+## Working files
+
+| File | What it's for |
+|---|---|
+| `README.md` | What each tool is and how to run it; update it when a tool changes |
+| `TODO.md` | Tool ideas and improvements, by priority |
+| `friction.md` | Gabriel's log of what slowed him down on a game; the source of new tools |
+
+## Workflow
+- Start working right away on what Gabriel asks; ask only when his input is needed.
+- A tool is done when it has been run on a real project (Pierresavant at
+  `../Pierresavant`, Love Will Find at `../Love Will Find`) and its result checked.
+- Commit only when asked.
+
+## Rules for tools
+- A tool takes the project folder as an argument and never assumes Pierresavant.
+- No dependencies to install: plain Node (18+) scripts or headless Godot scripts.
+- A tool writes only inside the project it is run on (e.g. `docs/atlas/`), never elsewhere.
+- Text shown to Gabriel is in plain English, short, no jargon.
+- A skill in `skills/<name>/SKILL.md` is the source of truth; after changing it, copy it
+  to `C:\Users\gabri\.claude\skills\<name>\SKILL.md`.
+
+## Layout
+- `tools/atlas/atlas.mjs` – the Code Atlas generator (parses GDScript, links calls and
+  signals, merges explanations); `tools/atlas/page.html` – the page it fills in (one
+  self-contained file: styles, script, data)
+- `skills/atlas/SKILL.md` – the `/atlas` skill

@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>__ATLAS_TITLE__ – Code Atlas</title>
+<style>
+:root {
+  --bg: #f5f3ee; --panel: #fffdf9; --ink: #26231f; --muted: #6f6a61; --line: #ddd7cb;
+  --accent: #9a5a14; --accent-soft: #f3e6d2; --code-bg: #f0ece3; --warn: #a3441c; --test: #3f6b52;
+  --kw: #8a3f8f; --str: #4d7a2a; --num: #1f6f8b; --com: #8b857a;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1a18; --panel: #232220; --ink: #e9e5dd; --muted: #a09a8f; --line: #3a3833;
+    --accent: #e2a85c; --accent-soft: #3a2f1f; --code-bg: #171614; --warn: #e58a5c; --test: #8fc2a3;
+    --kw: #d39ad8; --str: #a8cf85; --num: #7fc4dc; --com: #7d776c;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 "Segoe UI", system-ui, sans-serif; display: flex; }
+code, pre, .mono { font-family: "Cascadia Code", Consolas, "SF Mono", monospace; font-size: 13px; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+button { font: inherit; color: inherit; }
+
+#side { width: 290px; flex: none; height: 100vh; overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); padding: 14px 12px 40px; }
+#side h1 { font-size: 17px; margin: 0 0 2px; }
+#side h1 a { color: var(--ink); }
+#side .sub { color: var(--muted); font-size: 12px; margin-bottom: 12px; }
+#search { width: 100%; padding: 7px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); color: var(--ink); font: inherit; }
+#search:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.group-name { margin: 16px 0 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.group-name a { color: inherit; }
+.nav a { display: block; padding: 2px 8px; border-radius: 5px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.nav a:hover { background: var(--accent-soft); text-decoration: none; }
+.nav a.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+
+#main { flex: 1; height: 100vh; overflow-y: auto; }
+#page { max-width: 980px; margin: 0 auto; padding: 28px 32px 120px; }
+h2 { font-size: 26px; margin: 0 0 4px; text-wrap: balance; }
+h3 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 30px 0 10px; }
+.path { color: var(--muted); }
+.lead { font-size: 16px; margin: 12px 0 0; max-width: 70ch; white-space: pre-line; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin-top: 18px; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; }
+
+.chip { display: inline-block; margin: 0 4px 4px 0; padding: 0 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--panel); font-size: 13px; color: var(--ink); white-space: nowrap; }
+a.chip:hover { border-color: var(--accent); color: var(--accent); text-decoration: none; }
+.chip.guess { border-style: dashed; }
+.chip.test { color: var(--test); }
+.badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 4px; font: 11px/18px "Segoe UI", system-ui, sans-serif; background: var(--accent-soft); color: var(--accent); vertical-align: 2px; }
+.badge.warn { background: transparent; border: 1px solid var(--warn); color: var(--warn); }
+
+.fn { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); padding: 12px 16px; margin-bottom: 10px; scroll-margin-top: 16px; }
+.fn.target { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.fn .sig { font-weight: 600; overflow-wrap: anywhere; }
+.fn .sig .rest { font-weight: 400; color: var(--muted); }
+.fn p { margin: 6px 0 0; max-width: 75ch; }
+.fn .doc { color: var(--muted); font-size: 13px; white-space: pre-line; }
+.fn .none { color: var(--muted); font-style: italic; }
+.rel { display: grid; grid-template-columns: 84px 1fr; gap: 4px 8px; margin-top: 10px; font-size: 13px; }
+.rel dt { color: var(--muted); }
+.rel dd { margin: 0; }
+details { margin-top: 8px; }
+summary { cursor: pointer; color: var(--muted); font-size: 13px; width: max-content; }
+pre { margin: 8px 0 0; padding: 12px 14px; background: var(--code-bg); border-radius: 6px; overflow-x: auto; tab-size: 4; line-height: 1.45; }
+.kw { color: var(--kw); } .str { color: var(--str); } .num { color: var(--num); } .com { color: var(--com); font-style: italic; }
+
+.rows { border: 1px solid var(--line); border-radius: 8px; background: var(--panel); overflow: hidden; }
+.row { display: grid; grid-template-columns: minmax(180px, 280px) 1fr; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.row .what { color: var(--muted); font-size: 14px; }
+.row .mono { overflow-wrap: anywhere; }
+.stats { color: var(--muted); margin-top: 6px; }
+.toolbar { display: flex; gap: 14px; align-items: center; margin: 4px 0 10px; color: var(--muted); font-size: 13px; }
+.toolbar label { cursor: pointer; }
+
+#map { width: 100%; height: auto; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); margin-top: 16px; }
+#map .box rect { fill: var(--bg); stroke: var(--line); stroke-width: 1.5; }
+#map .box { cursor: pointer; }
+#map .box:hover rect, #map .box.hot rect { stroke: var(--accent); }
+#map .box text { fill: var(--ink); font: 600 14px "Segoe UI", system-ui, sans-serif; }
+#map .box text.small { fill: var(--muted); font-weight: 400; font-size: 12px; }
+#map path.edge { fill: none; stroke: var(--muted); opacity: .45; }
+#map.focus path.edge { opacity: .08; }
+#map.focus path.edge.out { stroke: var(--accent); opacity: .95; }
+#map.focus path.edge.in { stroke: var(--test); opacity: .95; }
+#map.focus .box { opacity: .35; }
+#map.focus .box.hot, #map.focus .box.near { opacity: 1; }
+.legend { color: var(--muted); font-size: 13px; margin-top: 8px; }
+.legend b.out { color: var(--accent); } .legend b.in { color: var(--test); }
+@media (max-width: 760px) { body { display: block; } #side { width: auto; height: auto; border-right: 0; border-bottom: 1px solid var(--line); } #main { height: auto; } .row { grid-template-columns: 1fr; gap: 2px; } }
+</style>
+</head>
+<body>
+<nav id="side">
+  <h1><a href="#/">__ATLAS_TITLE__</a></h1>
+  <div class="sub" id="sub"></div>
+  <input id="search" type="search" placeholder="Search functions, scripts, explanations…" autocomplete="off">
+  <div class="nav" id="nav"></div>
+</nav>
+<main id="main"><div id="page"></div></main>
+<script>
+const ATLAS = /*__ATLAS_DATA__*/null;
+const scripts = ATLAS.scripts;
+const byPath = Object.fromEntries(scripts.map((s) => [s.path, s]));
+const groups = [];
+for (const s of scripts) {
+  let g = groups.find((x) => x.id === s.group);
+  if (!g) groups.push(g = { id: s.group, scripts: [] });
+  g.scripts.push(s);
+}
+const isSupport = (id) => id === 'tests' || id === 'tools';
+groups.sort((a, b) => isSupport(a.id) - isSupport(b.id) || a.id.localeCompare(b.id));
+
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const prose = (t) => esc(t).replace(/`([^`]+)`/g, '<code>$1</code>').replace(/\n{2,}/g, '<br><br>').replace(/\n/g, ' ');
+const label = (s) => s.className || s.autoload || s.path.split('/').pop();
+const firstSentence = (t) => { const m = (t || '').replace(/\n/g, ' ').match(/^.*?[.:!?](\s|$)/); return (m ? m[0] : t || '').trim(); };
+const scriptHref = (p, fn) => '#/s/' + encodeURI(p) + (fn ? '::' + fn : '');
+const scriptChip = (p) => `<a class="chip${byPath[p].group === 'tests' ? ' test' : ''}" href="${scriptHref(p)}">${esc(label(byPath[p]))}</a>`;
+const funcChip = (ref, from) => {
+  const s = byPath[ref.s];
+  const name = (ref.s === from ? '' : label(s) + '.') + ref.f;
+  return `<a class="chip mono${ref.g ? ' guess' : ''}${s.group === 'tests' ? ' test' : ''}" href="${scriptHref(ref.s, ref.f)}"${ref.g ? ' title="Matched by name only"' : ''}>${esc(name)}</a>`;
+};
+
+function highlight(src) {
+  const re = /(#[^\n]*)|("(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*')|\b(func|var|const|if|elif|else|for|while|return|match|in|and|or|not|await|signal|static|class|extends|pass|break|continue|true|false|null|self|super|as|is)\b|\b(\d+(?:\.\d+)?)\b/g;
+  let out = '', last = 0, m;
+  while ((m = re.exec(src))) {
+    out += esc(src.slice(last, m.index));
+    const cls = m[1] ? 'com' : m[2] ? 'str' : m[3] ? 'kw' : 'num';
+    out += `<span class="${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(src.slice(last));
+}
+
+// ── sidebar
+const totalFuncs = scripts.reduce((n, s) => n + s.funcs.length, 0);
+document.getElementById('sub').textContent = `Code Atlas · ${scripts.length} scripts · ${totalFuncs} functions · ${ATLAS.generated}`;
+document.getElementById('nav').innerHTML = groups.map((g) =>
+  `<div class="group-name"><a href="#/g/${encodeURI(g.id)}">${esc(g.id)}</a></div>` +
+  g.scripts.map((s) => `<a href="${scriptHref(s.path)}" data-path="${esc(s.path)}" title="${esc(s.path)}">${esc(label(s))}</a>`).join('')
+).join('');
+
+// ── pages
+function home() {
+  const game = scripts.filter((s) => !isSupport(s.group));
+  const explained = scripts.reduce((n, s) => n + s.funcs.filter((f) => f.explain || f.doc || f.engine).length, 0);
+  return `<h2>${esc(ATLAS.project)}</h2>
+  <div class="stats">${game.length} game scripts, ${scripts.length - game.length} test and tool scripts, ${totalFuncs} functions (${explained} explained).</div>
+  <svg id="map"></svg>
+  <div class="legend">An arrow goes from a folder to a folder it uses. Hover a folder: <b class="out">what it uses</b>, <b class="in">what uses it</b>. Click to open it.</div>
+  <h3>Folders</h3>
+  <div class="rows">${groups.map((g) => `<div class="row"><div><a href="#/g/${encodeURI(g.id)}"><b>${esc(g.id)}</b></a></div><div class="what">${g.scripts.map((s) => esc(label(s))).join(', ')}</div></div>`).join('')}</div>`;
+}
+
+function groupPage(id) {
+  const g = groups.find((x) => x.id === id);
+  if (!g) return home();
+  return `<div class="path">Folder</div><h2>${esc(g.id)}</h2>
+  <div class="stats">${g.scripts.length} scripts, ${g.scripts.reduce((n, s) => n + s.funcs.length, 0)} functions.</div>
+  <h3>Scripts</h3>
+  <div class="rows">${g.scripts.map((s) => `<div class="row"><div><a href="${scriptHref(s.path)}"><b>${esc(label(s))}</b></a><div class="path mono">${esc(s.path.split('/').pop())}</div></div><div class="what">${prose(firstSentence(s.doc) || 'No description.')}</div></div>`).join('')}</div>`;
+}
+
+let showPrivate = true;
+function funcCard(s, f) {
+  const callers = f.calledBy.filter((c) => byPath[c.s].group !== 'tests');
+  const tests = f.calledBy.filter((c) => byPath[c.s].group === 'tests');
+  const open = f.sig.indexOf('(');
+  const badges = [];
+  if (f.static) badges.push('<span class="badge">static</span>');
+  if (f.private && !f.engine) badges.push('<span class="badge">private</span>');
+  if (f.engine) badges.push('<span class="badge">called by Godot</span>');
+  if (f.stale) badges.push('<span class="badge warn" title="The code changed since this explanation was written. Run /atlas to refresh it.">explanation outdated</span>');
+  if (!f.engine && !f.calledBy.length && !f.handles.length && s.group !== 'tests') badges.push('<span class="badge warn" title="Nothing in the project seems to call it. It may be called from a scene, or be unused.">no caller found</span>');
+  let text;
+  if (f.explain) text = `<p>${prose(f.explain)}</p>` + (f.engine ? `<p class="doc">${prose(f.engine)}</p>` : '');
+  else if (f.doc) text = `<p>${prose(f.doc)}</p>`;
+  else if (f.engine) text = `<p>${prose(f.engine)}</p>`;
+  else text = s.group === 'tests' ? '' : '<p class="none">No explanation yet.</p>';
+  const rel = [];
+  if (f.handles.length) rel.push(`<dt>Reacts to</dt><dd>${f.handles.map((h) => `<span class="chip mono">${esc(h)}</span>`).join('')}</dd>`);
+  if (f.calls.length) rel.push(`<dt>Calls</dt><dd>${f.calls.map((c) => funcChip(c, s.path)).join('')}</dd>`);
+  if (callers.length) rel.push(`<dt>Called by</dt><dd>${callers.map((c) => funcChip(c, s.path)).join('')}</dd>`);
+  if (tests.length) rel.push(`<dt>Tested in</dt><dd>${tests.map((c) => funcChip(c, s.path)).join('')}</dd>`);
+  return `<div class="fn" id="fn-${esc(f.name)}" data-private="${f.private && !f.engine ? 1 : 0}">
+    <div class="sig mono">${f.static ? '<span class="rest">static </span>' : ''}${esc(f.sig.slice(f.sig.indexOf('func ') + 5, open))}<span class="rest">${esc(f.sig.slice(open))}</span>${badges.join('')}</div>
+    ${text}
+    ${rel.length ? `<dl class="rel">${rel.join('')}</dl>` : ''}
+    <details><summary>Code (line ${f.line})</summary><pre>${highlight(f.src)}</pre></details>
+  </div>`;
+}
+
+function scriptPage(p) {
+  const s = byPath[p];
+  if (!s) return home();
+  const facts = [];
+  if (s.extends) facts.push(['Extends', s.parentPath ? scriptChip(s.parentPath) : `<span class="mono">${esc(s.extends)}</span>`]);
+  if (s.autoload) facts.push(['Autoload', `Reachable from anywhere as <code>${esc(s.autoload)}</code>.`]);
+  if (s.scenes.length) facts.push(['In scenes', s.scenes.map((x) => `<span class="chip mono">${esc(x)}</span>`).join('')]);
+  if (s.scenesLoaded.length) facts.push(['Loads scenes', s.scenesLoaded.map((x) => `<span class="chip mono">${esc(x)}</span>`).join('')]);
+  if (s.data.length) facts.push(['Data files', s.data.map((d) => `<span class="chip">${d.count} in <span class="mono">${esc(d.dir)}/</span></span>`).join('')]);
+  if (s.uses.length) facts.push(['Uses', s.uses.map(scriptChip).join('')]);
+  if (s.usedBy.length) facts.push(['Used by', s.usedBy.map(scriptChip).join('')]);
+  const signals = s.signals.length ? `<h3>Signals</h3><div class="rows">${s.signals.map((g) => `<div class="row"><div class="mono"><b>${esc(g.name)}</b>${esc(g.params)}</div><div class="what">${prose(g.doc)}
+    ${g.emitters.length ? `<div>Sent by ${g.emitters.map((e) => funcChip(e, s.path)).join('')}</div>` : ''}
+    ${g.listeners.length ? `<div>Heard by ${g.listeners.map((e) => funcChip(e, s.path)).join('')}</div>` : ''}</div></div>`).join('')}</div>` : '';
+  const members = s.members.length ? `<h3>Data it holds</h3><div class="rows">${s.members.map((m) => `<div class="row"><div class="mono">${esc(m.decl)}</div><div class="what">${prose(m.doc)}</div></div>`).join('')}</div>` : '';
+  const hasPrivate = s.funcs.some((f) => f.private && !f.engine);
+  return `<div class="path mono">${esc(s.path)} · ${s.lines} lines</div><h2>${esc(label(s))}</h2>
+  ${s.doc ? `<p class="lead">${prose(s.doc)}</p>` : ''}
+  ${facts.length ? `<dl class="facts">${facts.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : ''}
+  ${signals}${members}
+  <h3>Functions (${s.funcs.length})</h3>
+  ${hasPrivate ? `<div class="toolbar"><label><input type="checkbox" id="priv"${showPrivate ? ' checked' : ''}> Show private functions (the ones starting with _)</label></div>` : ''}
+  <div id="funcs">${s.funcs.map((f) => funcCard(s, f)).join('')}</div>`;
+}
+
+function searchPage(q) {
+  const words = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hit = (...texts) => { const t = texts.join(' ').toLowerCase(); return words.every((w) => t.includes(w)); };
+  const rows = [];
+  for (const s of scripts) {
+    if (hit(s.path, s.className || '', s.doc)) rows.push({ rank: hit(label(s)) ? 0 : 2, html: `<div class="row"><div><a href="${scriptHref(s.path)}"><b>${esc(label(s))}</b></a><div class="path">script</div></div><div class="what">${prose(firstSentence(s.doc))}</div></div>` });
+    for (const f of s.funcs) {
+      if (!hit(f.name, f.explain, f.doc, label(s))) continue;
+      rows.push({ rank: hit(f.name) ? 1 : 3, html: `<div class="row"><div><a class="mono" href="${scriptHref(s.path, f.name)}">${esc(f.name)}</a><div class="path">${esc(label(s))}</div></div><div class="what">${prose(f.explain || f.doc || f.engine)}</div></div>` });
+    }
+    for (const g of s.signals) {
+      if (hit(g.name, g.doc)) rows.push({ rank: 1, html: `<div class="row"><div><a class="mono" href="${scriptHref(s.path)}">${esc(g.name)}</a><div class="path">signal of ${esc(label(s))}</div></div><div class="what">${prose(g.doc)}</div></div>` });
+    }
+  }
+  rows.sort((a, b) => a.rank - b.rank);
+  return `<div class="path">Search</div><h2>${esc(q)}</h2><div class="stats">${rows.length} result${rows.length === 1 ? '' : 's'}${rows.length > 150 ? ', showing the first 150' : ''}.</div>
+  ${rows.length ? `<h3>Results</h3><div class="rows">${rows.slice(0, 150).map((r) => r.html).join('')}</div>` : ''}`;
+}
+
+// ── the map of folders
+function drawMap() {
+  const svg = document.getElementById('map');
+  if (!svg) return;
+  const nodes = groups.filter((g) => !isSupport(g.id));
+  const weight = {};
+  for (const s of scripts) for (const u of s.uses) {
+    const a = s.group, b = byPath[u].group;
+    if (a === b || isSupport(a) || isSupport(b)) continue;
+    weight[a + '>' + b] = (weight[a + '>' + b] || 0) + 1;
+  }
+  // When two folders use each other, the stronger direction decides who is above.
+  const down = {};
+  for (const key of Object.keys(weight)) {
+    const [a, b] = key.split('>');
+    const back = weight[b + '>' + a] || 0;
+    if (weight[key] > back || (weight[key] === back && a < b)) (down[a] ||= []).push(b);
+  }
+  const layer = {};
+  const visiting = new Set();
+  const depth = (id) => {
+    if (id in layer) return layer[id];
+    if (visiting.has(id)) return 0;
+    visiting.add(id);
+    let d = 0;
+    for (const b of down[id] || []) d = Math.max(d, depth(b) + 1);
+    visiting.delete(id);
+    return (layer[id] = d);
+  };
+  nodes.forEach((g) => depth(g.id));
+  const top = Math.max(...nodes.map((g) => layer[g.id]));
+  const W = 920, BW = 168, BH = 54, ROW = 112;
+  const pos = {};
+  for (let d = top; d >= 0; d--) {
+    const row = nodes.filter((g) => layer[g.id] === d);
+    row.forEach((g, i) => { pos[g.id] = { x: (W / (row.length + 1)) * (i + 1), y: 46 + (top - d) * ROW }; });
+  }
+  const H = 46 + top * ROW + BH + 26;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  let html = '<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="context-stroke"/></marker></defs>';
+  for (const key of Object.keys(weight)) {
+    const [a, b] = key.split('>');
+    const p = pos[a], q = pos[b];
+    const goesDown = q.y > p.y;
+    const y1 = p.y + (goesDown ? BH : 0), y2 = q.y + (goesDown ? 0 : BH);
+    const sameRow = p.y === q.y;
+    const d = sameRow
+      ? `M${p.x} ${p.y + BH} C${p.x} ${p.y + BH + 46}, ${q.x} ${q.y + BH + 46}, ${q.x} ${q.y + BH}`
+      : `M${p.x} ${y1} C${p.x} ${(y1 + y2) / 2}, ${q.x} ${(y1 + y2) / 2}, ${q.x} ${y2}`;
+    html += `<path class="edge" data-a="${esc(a)}" data-b="${esc(b)}" d="${d}" stroke-width="${Math.min(1 + weight[key] * 0.35, 5)}" marker-end="url(#arrow)"><title>${esc(a)} uses ${esc(b)} (${weight[key]} link${weight[key] === 1 ? '' : 's'})</title></path>`;
+  }
+  for (const g of nodes) {
+    const p = pos[g.id];
+    html += `<g class="box" data-id="${esc(g.id)}"><rect x="${p.x - BW / 2}" y="${p.y}" width="${BW}" height="${BH}" rx="8"/>
+      <text x="${p.x}" y="${p.y + 23}" text-anchor="middle">${esc(g.id)}</text>
+      <text class="small" x="${p.x}" y="${p.y + 41}" text-anchor="middle">${g.scripts.length} script${g.scripts.length === 1 ? '' : 's'} · ${g.scripts.reduce((n, s) => n + s.funcs.length, 0)} functions</text></g>`;
+  }
+  svg.innerHTML = html;
+  svg.querySelectorAll('.box').forEach((box) => {
+    const id = box.dataset.id;
+    box.addEventListener('click', () => { location.hash = '#/g/' + encodeURI(id); });
+    box.addEventListener('mouseenter', () => {
+      svg.classList.add('focus');
+      box.classList.add('hot');
+      svg.querySelectorAll('path.edge').forEach((e) => {
+        const out = e.dataset.a === id, inn = e.dataset.b === id;
+        e.classList.toggle('out', out);
+        e.classList.toggle('in', inn);
+        if (out || inn) svg.querySelector(`.box[data-id="${CSS.escape(out ? e.dataset.b : e.dataset.a)}"]`).classList.add('near');
+      });
+    });
+    box.addEventListener('mouseleave', () => {
+      svg.classList.remove('focus');
+      svg.querySelectorAll('.hot, .near, .out, .in').forEach((e) => e.classList.remove('hot', 'near', 'out', 'in'));
+    });
+  });
+}
+
+// ── routing
+const page = document.getElementById('page');
+const search = document.getElementById('search');
+function applyPrivate() {
+  document.querySelectorAll('.fn[data-private="1"]').forEach((el) => { el.style.display = showPrivate ? '' : 'none'; });
+}
+function route() {
+  const hash = decodeURI(location.hash || '#/');
+  let current = '';
+  let target = '';
+  if (hash.startsWith('#/s/')) {
+    [current, target] = hash.slice(4).split('::');
+    page.innerHTML = scriptPage(current);
+  } else if (hash.startsWith('#/g/')) page.innerHTML = groupPage(hash.slice(4));
+  else if (hash.startsWith('#/q/')) page.innerHTML = searchPage(hash.slice(4));
+  else page.innerHTML = home();
+  drawMap();
+  document.querySelectorAll('#nav a[data-path]').forEach((a) => a.classList.toggle('on', a.dataset.path === current));
+  const priv = document.getElementById('priv');
+  if (priv) priv.addEventListener('change', () => { showPrivate = priv.checked; applyPrivate(); });
+  const el = target && document.getElementById('fn-' + target);
+  if (el) {
+    el.classList.add('target');
+    el.style.display = '';
+    el.scrollIntoView({ block: 'start' });
+  } else {
+    applyPrivate();
+    document.getElementById('main').scrollTop = 0;
+  }
+  if (el) document.querySelectorAll('.fn[data-private="1"]').forEach((x) => { if (x !== el && !showPrivate) x.style.display = 'none'; });
+  document.title = (current && byPath[current] ? label(byPath[current]) + ' – ' : '') + ATLAS.project + ' Code Atlas';
+}
+let timer = 0;
+search.addEventListener('input', () => {
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    const q = search.value.trim();
+    if (q.length >= 2) location.hash = '#/q/' + encodeURI(q);
+    else if (location.hash.startsWith('#/q/')) location.hash = '#/';
+  }, 160);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === '/' && document.activeElement !== search) { e.preventDefault(); search.focus(); search.select(); }
+});
+window.addEventListener('hashchange', route);
+route();
+</script>
+</body>
+</html>
