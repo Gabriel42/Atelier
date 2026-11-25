@@ -2,6 +2,7 @@
 
 ## Now
 - **Atlas on Love Will Find**: run it there; fix whatever the parser misses on a second codebase.
+- **Checklist: tune the list**: go through each game's report with Gabriel, mark the items a game does not need in `decisions.json`, and fix the patterns that give wrong "There" or "Missing" answers. Two known gaps: a game's own title-screen code can count as "Quit to menu"; "Options menu" needs a closer look on Pierresavant.
 
 ## Next
 - **`/release`**: one command for a game: run all tests, bump the version, draft patch notes from `done.md`, export Web and Windows, zip, push to itch.io with butler.

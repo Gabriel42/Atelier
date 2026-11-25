@@ -9,7 +9,8 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 | Folder | What it is |
 |---|---|
 | `tools/atlas/` | **Code Atlas**: turns a Godot project's code into one browsable page (map of the folders, every script and function explained, who calls whom, signals) |
-| `skills/` | Claude skills that drive the tools (`/atlas`); the source of truth, copied to `~/.claude/skills/` |
+| `tools/checklist/` | **Game essentials checklist**: the systems almost every game needs (title menu, save, options, language, debug panel, and so on) and whether a project has each one |
+| `skills/` | Claude skills that drive the tools (`/atlas`, `/checklist`); the source of truth, copied to `~/.claude/skills/` |
 
 ## Code Atlas
 
@@ -30,3 +31,23 @@ the function's code: when a function changes, its explanation shows as outdated 
 
 Links between functions are found by reading the code, not by running it: a dashed chip
 means "matched by name only", and "no caller found" is a hint, not a proof.
+
+## Game essentials checklist
+
+Needs Node 18+. From anywhere:
+
+```
+node tools/checklist/checklist.mjs <project folder>      # writes <project>/docs/checklist/checklist.md
+```
+
+The list is in `tools/checklist/essentials.mjs`: about 35 systems, in eight groups (start
+and menus, saving, settings, language, debug, information and feedback, sound, making and
+shipping). Each one is looked for in the game's scripts and scenes, and the report says
+"There", "Check" (only a file name matches) or "Missing", with the files it found.
+
+To say an item is not needed for a game, add it to `<project>/docs/checklist/decisions.json`
+with a reason, e.g. `{ "language-picker": "English only" }`. In a Claude session inside a
+game project, type `/checklist`.
+
+It reads words, not behaviour: "There" means the code mentions the system, so check the
+evidence. Tests and tools are only checked by file name.
