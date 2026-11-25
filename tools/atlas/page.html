@@ -179,7 +179,7 @@ function funcCard(s, f) {
   if (f.private && !f.engine) badges.push('<span class="badge">private</span>');
   if (f.engine) badges.push('<span class="badge">called by Godot</span>');
   if (f.stale) badges.push('<span class="badge warn" title="The code changed since this explanation was written. Run /atlas to refresh it.">explanation outdated</span>');
-  if (!f.engine && !f.calledBy.length && !f.handles.length && s.group !== 'tests') badges.push('<span class="badge warn" title="Nothing in the project seems to call it. It may be called from a scene, or be unused.">no caller found</span>');
+  if (!f.engine && !f.calledBy.length && !f.handles.length && !f.overrides && s.group !== 'tests') badges.push('<span class="badge warn" title="Nothing in the project seems to call it. It may be called from a scene, or be unused.">no caller found</span>');
   let text;
   if (f.explain) text = `<p>${prose(f.explain)}</p>` + (f.engine ? `<p class="doc">${prose(f.engine)}</p>` : '');
   else if (f.doc) text = `<p>${prose(f.doc)}</p>`;
@@ -187,11 +187,13 @@ function funcCard(s, f) {
   else text = s.group === 'tests' ? '' : '<p class="none">No explanation yet.</p>';
   const rel = [];
   if (f.handles.length) rel.push(`<dt>Reacts to</dt><dd>${f.handles.map((h) => `<span class="chip mono">${esc(h)}</span>`).join('')}</dd>`);
+  if (f.overrides) rel.push(`<dt title="This script's own version of a function of the script it extends. Callers go through that one.">Own version of</dt><dd>${funcChip(f.overrides, s.path)}</dd>`);
+  if (f.overriddenBy.length) rel.push(`<dt title="Scripts that extend this one and replace this function with their own.">Other versions</dt><dd>${f.overriddenBy.map((c) => funcChip(c, s.path)).join('')}</dd>`);
   if (f.calls.length) rel.push(`<dt>Calls</dt><dd>${f.calls.map((c) => funcChip(c, s.path)).join('')}</dd>`);
   if (callers.length) rel.push(`<dt>Called by</dt><dd>${callers.map((c) => funcChip(c, s.path)).join('')}</dd>`);
   if (tests.length) rel.push(`<dt>Tested in</dt><dd>${tests.map((c) => funcChip(c, s.path)).join('')}</dd>`);
   return `<div class="fn" id="fn-${esc(f.name)}" data-private="${f.private && !f.engine ? 1 : 0}">
-    <div class="sig mono">${f.static ? '<span class="rest">static </span>' : ''}${esc(f.sig.slice(f.sig.indexOf('func ') + 5, open))}<span class="rest">${esc(f.sig.slice(open))}</span>${badges.join('')}</div>
+    <div class="sig mono">${f.static ? '<span class="rest">static </span>' : ''}${esc(f.name)}<span class="rest">${esc(f.sig.slice(open))}</span>${badges.join('')}</div>
     ${text}
     ${rel.length ? `<dl class="rel">${rel.join('')}</dl>` : ''}
     <details><summary>Code (line ${f.line})</summary><pre>${highlight(f.src)}</pre></details>

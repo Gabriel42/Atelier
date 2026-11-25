@@ -56,7 +56,25 @@ const ENGINE_CALLBACKS = {
   _get: 'Godot calls this when a property that is not declared is read.',
   _set: 'Godot calls this when a property that is not declared is written.',
   _get_property_list: 'Godot calls this to list extra properties.',
+  _static_init: 'Runs once, when the script is first loaded.',
+  _input_event: 'Godot calls this when the mouse does something over this object.',
+  _process_custom_fx: 'Godot calls this for every letter of a text that uses this effect, every frame.',
+  _log_error: 'Godot calls this for every error or warning it reports.',
+  _log_message: 'Godot calls this for every message it prints.',
 };
+
+/** Signal names Godot's own nodes have: never linked by name alone. */
+const GENERIC_SIGNALS = new Set(`finished pressed timeout changed toggled text_changed value_changed
+item_selected ready tree_exited tree_entered resized visibility_changed completed draw focus_entered
+focus_exited mouse_entered mouse_exited gui_input animation_finished hidden confirmed canceled
+close_requested text_submitted button_down button_up`.split(/\s+/));
+
+/** Godot types that never carry a project script: nothing of the project is called on them. */
+const PLAIN_TYPES = new Set(`int float bool String StringName NodePath Vector2 Vector2i Vector3 Vector3i
+Vector4 Rect2 Rect2i Color Array Dictionary Transform2D Transform3D Basis Quaternion AABB Plane RID
+PackedByteArray PackedInt32Array PackedInt64Array PackedFloat32Array PackedFloat64Array PackedStringArray
+PackedVector2Array PackedVector3Array PackedColorArray Tween RandomNumberGenerator PackedScene Texture2D
+Image FileAccess DirAccess JSON ConfigFile`.split(/\s+/));
 
 // ───────────────────────────────────────────── files
 
@@ -86,10 +104,14 @@ function groupOf(rel) {
 
 // ───────────────────────────────────────────── parsing
 
-/** Replaces comments and string contents with nothing, keeping line breaks. */
-function stripCode(src) {
+/**
+ * Replaces comments and string contents with nothing, keeping line breaks.
+ * `inside`, when given, receives the (0-based) lines that start inside a string.
+ */
+function stripCode(src, inside) {
   let out = '';
   let i = 0;
+  let line = 0;
   while (i < src.length) {
     const c = src[i];
     if (c === '#') {
@@ -98,19 +120,30 @@ function stripCode(src) {
       const triple = src.startsWith(c.repeat(3), i);
       const quote = triple ? c.repeat(3) : c;
       i += quote.length;
+      out += '""';
       while (i < src.length && !src.startsWith(quote, i)) {
         if (src[i] === '\\') i++;
-        if (src[i] === '\n') out += '\n';
+        if (src[i] === '\n') {
+          out += '\n';
+          line++;
+          if (inside) inside.add(line);
+        }
         i++;
       }
       i += quote.length;
-      out += '""';
     } else {
+      if (c === '\n') line++;
       out += c;
       i++;
     }
   }
   return out;
+}
+
+/** Element type of `name: Array[Type]` (rest is what follows the name). */
+function elementType(rest) {
+  const m = rest.trim().match(/^:\s*Array\[\s*([A-Za-z_]\w*)\s*\]/);
+  return m ? m[1] : null;
 }
 
 function baseType(type) {
@@ -134,6 +167,16 @@ function declaredType(rest) {
   return null;
 }
 
+/** Tells whether the bracket opened at `open` closes on the last character of `text`. */
+function closesAtEnd(text, open) {
+  let depth = 0;
+  for (let i = open; i < text.length; i++) {
+    if ('([{'.includes(text[i])) depth++;
+    if (')]}'.includes(text[i]) && --depth === 0) return i === text.length - 1;
+  }
+  return false;
+}
+
 function splitParams(text) {
   const parts = [];
   let depth = 0;
@@ -155,7 +198,7 @@ function parseScript(rel, text) {
   const script = {
     path: rel, group: groupOf(rel), className: null, extends: null, tool: false,
     doc: '', signals: [], members: [], funcs: [], lines: lines.length,
-    memberTypes: {}, loads: [], text,
+    memberTypes: {}, memberElements: {}, innerClasses: [], accessors: [], loads: [], text,
   };
 
   // Header: class_name, extends, then the script's own ## comment.
@@ -179,29 +222,77 @@ function parseScript(rel, text) {
   }
   script.doc = headerDoc.join('\n').trim();
 
+  // Declarations: the script's own (no indent) and those of its inner classes.
+  const inside = new Set();
+  const code = stripCode(text, inside).split(/\r?\n/);
+  const deeper = (line, indent) => line.startsWith(indent) && /^\s/.test(line.slice(indent.length));
+  /** Last line of the block under line `from`, whose owner is indented by `indent`. */
+  const blockEnd = (from, indent) => {
+    let last = from;
+    for (let b = from + 1; b < lines.length; b++) {
+      if (lines[b].trim() === '') continue;
+      if (inside.has(b) || deeper(lines[b], indent)) { last = b; continue; }
+      if ((code[b] || '').trim() === '') continue; // a comment further left does not end the block
+      break;
+    }
+    return last;
+  };
+
   let pending = [];
+  let cls = null; // the inner class being read: { name, indent }
   for (let n = 0; n < lines.length; n++) {
-    const l = lines[n];
+    if (inside.has(n)) continue; // text of a multi-line string
+    let l = lines[n];
+    if (cls) {
+      if (l.trim() === '') continue;
+      if (/^\s/.test(l)) {
+        if (cls.indent === null) cls.indent = l.match(/^\s+/)[0];
+        if (!l.startsWith(cls.indent) || /^\s/.test(l.slice(cls.indent.length))) continue; // inside a function
+        l = l.slice(cls.indent.length);
+      } else cls = null;
+    }
+    const indent = cls ? cls.indent : '';
+    const prefix = cls ? cls.name + '.' : '';
     let m;
     if (/^##/.test(l)) { pending.push(l.replace(/^##\s?/, '')); continue; }
     if (/^@\w+/.test(l) && !/\b(var|func)\b/.test(l)) continue; // lone annotation, keep the doc
     const doc = pending.join('\n').trim();
     pending = [];
     if ((m = l.match(/^signal\s+(\w+)\s*(\(.*\))?/))) {
-      script.signals.push({ name: m[1], params: m[2] || '', doc, line: n + 1, emitters: [], listeners: [] });
+      if (!cls) script.signals.push({ name: m[1], params: m[2] || '', doc, line: n + 1, emitters: [], listeners: [] });
+      continue;
+    }
+    if (!cls && (m = l.match(/^class\s+(\w+)/))) {
+      script.members.push({ name: m[1], kind: 'class', exported: false, decl: l.trim().replace(/:\s*$/, ''), doc, line: n + 1 });
+      script.innerClasses.push(m[1]);
+      cls = { name: m[1], indent: null };
       continue;
     }
     if ((m = l.match(/^((?:@\w+(?:\([^)]*\))?\s+)*)(static\s+)?(var|const)\s+(\w+)(.*)$/))) {
-      const type = declaredType(m[5]);
-      if (type) script.memberTypes[m[4]] = type;
+      if (!cls) {
+        const type = declaredType(m[5]);
+        if (type) script.memberTypes[m[4]] = type;
+        const element = elementType(m[5]);
+        if (element) script.memberElements[m[4]] = element;
+      }
       let decl = l.trim().replace(/:\s*$/, '');
+      if (cls) decl = decl.replace(new RegExp(`\\b${m[4]}\\b`), prefix + m[4]);
       if (/[\[({]\s*$/.test(decl)) decl += ' …';
       if (decl.length > 110) decl = decl.slice(0, 107) + '…';
-      script.members.push({ name: m[4], kind: m[3], exported: /@export/.test(m[1]), decl, doc, line: n + 1 });
+      script.members.push({ name: prefix + m[4], kind: m[3], exported: /@export/.test(m[1]), decl, doc, line: n + 1 });
+      // A property with its own set/get code: remember that code, it can call functions.
+      const own = (code[n] || '').trim();
+      const block = /:$/.test(own);
+      if (block || /\b(set|get)\s*=/.test(own)) {
+        const end = block ? blockEnd(n, indent) : n;
+        const text = code.slice(block ? n + 1 : n, end + 1).join('\n');
+        if (!cls && !/\bfunc\b/.test(own)) script.accessors.push({ name: m[4], code: text, set: /\bset\b/.test(text) });
+        n = end;
+      }
       continue;
     }
     if ((m = l.match(/^enum\s+(\w+)/))) {
-      script.members.push({ name: m[1], kind: 'enum', exported: false, decl: l.trim().slice(0, 110), doc, line: n + 1 });
+      script.members.push({ name: prefix + m[1], kind: 'enum', exported: false, decl: l.trim().slice(0, 110), doc, line: n + 1 });
       continue;
     }
     if ((m = l.match(/^(static\s+)?func\s+(\w+)\s*\(/))) {
@@ -210,43 +301,61 @@ function parseScript(rel, text) {
       let depth = 0;
       let sig = '';
       for (; end < lines.length; end++) {
-        const code = stripCode(lines[end]);
-        for (const c of code) {
+        const lineCode = code[end] || '';
+        for (const c of lineCode) {
           if ('([{'.includes(c)) depth++;
           if (')]}'.includes(c)) depth--;
         }
         sig += (sig ? ' ' : '') + lines[end].trim();
-        if (depth <= 0 && /:\s*$/.test(code.trim())) break;
+        if (depth <= 0 && /:\s*$/.test(lineCode.trim())) break;
       }
       const bodyStart = end + 1;
-      let last = end;
-      for (let b = bodyStart; b < lines.length; b++) {
-        if (lines[b].trim() === '') continue;
-        if (!/^\s/.test(lines[b])) break;
-        last = b;
-      }
+      const last = blockEnd(end, indent);
       const src = lines.slice(n, last + 1).join('\n');
       const body = lines.slice(bodyStart, last + 1).join('\n');
+      const bodyCode = code.slice(bodyStart, last + 1).join('\n');
       sig = sig.replace(/:\s*(#.*)?$/, '').replace(/\s+/g, ' ');
       const open = sig.indexOf('(');
       const close = sig.lastIndexOf(')');
       const localTypes = {};
+      const localElements = {};
+      const mixed = new Set(); // locals declared several times with different types
+      const setLocal = (name, type) => {
+        if (name in localTypes && localTypes[name] !== type) mixed.add(name);
+        localTypes[name] = type;
+      };
       for (const p of splitParams(sig.slice(open + 1, close))) {
         const pm = p.trim().match(/^(\w+)(.*)$/);
         if (pm) {
           const t = declaredType(pm[2]);
-          if (t) localTypes[pm[1]] = t;
+          if (t) setLocal(pm[1], t);
+          const e = elementType(pm[2]);
+          if (e) localElements[pm[1]] = e;
         }
       }
       for (const lm of body.matchAll(/\b(?:var|for)\s+(\w+)\s*(:=?[^\n]*)/g)) {
         const t = declaredType(lm[2].replace(/\s+in\s.*$/, ''));
-        if (t) localTypes[lm[1]] = t;
+        if (t) setLocal(lm[1], t);
+        const e = elementType(lm[2]);
+        if (e) localElements[lm[1]] = e;
       }
+      // What untyped locals are made from, to work out their type later.
+      const inits = {};
+      for (const lm of bodyCode.matchAll(/\bvar\s+(\w+)\s*:=\s*([^\n]+)/g)) {
+        if (lm[1] in inits && inits[lm[1]] !== lm[2].trim()) mixed.add(lm[1]);
+        inits[lm[1]] = lm[2].trim();
+      }
+      for (const name of mixed) { delete localTypes[name]; delete inits[name]; }
+      const loops = {};
+      for (const lm of bodyCode.matchAll(/\bfor\s+(\w+)\s+in\s+([A-Za-z_][\w.]*)\s*:/g)) loops[lm[1]] = lm[2];
+      const ret = sig.slice(close + 1).match(/->\s*(?:Array\[\s*([A-Za-z_]\w*)\s*\]|([A-Za-z_]\w*))/);
       script.funcs.push({
-        name: m[2], sig, line: n + 1, doc, static: !!m[1], private: m[2].startsWith('_'),
-        engine: ENGINE_CALLBACKS[m[2]] || '', src, body: stripCode(body), localTypes,
+        name: prefix + m[2], short: m[2], inner: cls ? cls.name : null,
+        sig, line: n + 1, doc, static: !!m[1], private: m[2].startsWith('_'),
+        engine: ENGINE_CALLBACKS[m[2]] || '', src, body: bodyCode, localTypes, localElements, inits, loops,
+        returns: ret ? ret[2] || null : null, returnsElement: ret ? ret[1] || null : null,
         hash: crypto.createHash('sha1').update(src.replace(/\s+$/gm, '')).digest('hex').slice(0, 10),
-        calls: [], calledBy: [], handles: [],
+        calls: [], calledBy: [], handles: [], overrides: null, overriddenBy: [],
       });
       n = last;
       continue;
@@ -297,9 +406,14 @@ function analyse(root) {
     for (let c = s, guard = 0; c && guard < 20; c = parentOf(c), guard++) out.push(c);
     return out;
   };
-  const findFunc = (s, name) => {
+  /** `inner`: the inner class the caller is in, whose own functions come first. */
+  const findFunc = (s, name, inner) => {
+    if (inner) {
+      const f = s.funcs.find((x) => x.inner === inner && x.short === name);
+      if (f) return { s, f };
+    }
     for (const c of chain(s)) {
-      const f = c.funcs.find((x) => x.name === name);
+      const f = c.funcs.find((x) => !x.inner && x.name === name);
       if (f) return { s: c, f };
     }
     return null;
@@ -315,32 +429,120 @@ function analyse(root) {
   const funcDefs = {};
   const signalDefs = {};
   const memberTypeTable = {};
+  const memberElementTable = {};
+  const innerClassNames = new Set();
   for (const s of scripts) {
-    for (const f of s.funcs) (funcDefs[f.name] ||= []).push({ s, f });
+    for (const f of s.funcs) (funcDefs[f.short] ||= []).push({ s, f });
     for (const g of s.signals) (signalDefs[g.name] ||= []).push({ s, g });
     for (const [name, type] of Object.entries(s.memberTypes)) (memberTypeTable[name] ||= new Set()).add(type);
+    for (const [name, type] of Object.entries(s.memberElements)) (memberElementTable[name] ||= new Set()).add(type);
+    for (const name of s.innerClasses) innerClassNames.add(name);
   }
+  const only = (set) => (set && set.size === 1 ? [...set][0] : null);
 
-  /** The project script an expression like `a.b.c` most likely is an instance of. */
-  const typeOfReceiver = (s, f, receiver, chained) => {
-    if (receiver === 'self') return s;
-    if (receiver === 'super') return parentOf(s);
+  // A function that replaces its parent script's function of the same name.
+  for (const s of scripts) {
+    const parent = parentOf(s);
+    if (!parent) continue;
+    for (const f of s.funcs) {
+      if (f.inner || f.engine) continue;
+      const base = findFunc(parent, f.name);
+      if (!base) continue;
+      f.overrides = { s: base.s.path, f: base.f.name };
+      base.f.overriddenBy.push({ s: s.path, f: f.name });
+    }
+  }
+  /** The one place a function name is defined (its replacements in child scripts aside). */
+  const uniqueDef = (name) => {
+    const roots = (funcDefs[name] || []).filter((d) => !d.f.overrides);
+    return roots.length === 1 ? roots[0] : null;
+  };
+
+  /** Marks a receiver known to be one of Godot's own types (so nothing of the project). */
+  const ENGINE = { engine: true };
+
+  /** Name of the type of `receiver` (a variable, class or autoload name), when it can be told. */
+  const typeName = (s, f, receiver, chained, depth = 0) => {
     if (!chained) {
-      const local = f.localTypes[receiver];
-      if (local && named(local)) return named(local);
-      for (const c of chain(s)) {
-        const t = c.memberTypes[receiver];
-        if (t && named(t)) return named(t);
+      if (f.localTypes[receiver]) return f.localTypes[receiver];
+      if (depth < 4) {
+        if (receiver in f.inits) {
+          const t = typeOfExpr(s, f, f.inits[receiver], depth + 1);
+          if (t) return t;
+        }
+        if (receiver in f.loops) {
+          const t = elementOfExpr(s, f, f.loops[receiver], depth + 1);
+          if (t) return t;
+        }
+      }
+      if (!f.inner) {
+        for (const c of chain(s)) if (c.memberTypes[receiver]) return c.memberTypes[receiver];
       }
     }
-    if (named(receiver)) return named(receiver);
-    const types = memberTypeTable[receiver];
-    if (types && types.size === 1) {
-      const t = named([...types][0]);
-      if (t) return t;
+    if (named(receiver)) return receiver;
+    // Last resort: a member of that name elsewhere, when it holds a project script.
+    const elsewhere = only(memberTypeTable[receiver]);
+    return elsewhere && named(elsewhere) ? elsewhere : null;
+  };
+
+  /** The project script an expression like `a.b.c` most likely is an instance of, or ENGINE. */
+  const typeOfReceiver = (s, f, receiver, chained, depth = 0) => {
+    if (receiver === 'self') return f.inner ? null : s;
+    if (receiver === 'super') return f.inner ? null : parentOf(s);
+    const t = typeName(s, f, receiver, chained, depth);
+    if (!t) return null;
+    if (named(t)) return named(t);
+    return PLAIN_TYPES.has(t) && !innerClassNames.has(t) ? ENGINE : null;
+  };
+
+  /** The function `path.name(…)` reaches, when its owner can be told. */
+  const resolveCall = (s, f, path, name, depth = 0) => {
+    if (path.length === 0) return findFunc(s, name, f.inner);
+    const owner = typeOfReceiver(s, f, path[path.length - 1], path.length > 1, depth);
+    if (owner === ENGINE) return null;
+    const found = owner ? findFunc(owner, name) : null;
+    if (found) return found;
+    return GENERIC.has(name) || ENGINE_CALLBACKS[name] ? null : uniqueDef(name);
+  };
+
+  /** Type name of a simple expression: `a.b`, `a.b(…)`, `X.new(…)`, `… as X`. */
+  function typeOfExpr(s, f, expr, depth) {
+    let m;
+    if ((m = expr.match(/\bas\s+([A-Za-z_]\w*)$/))) return m[1];
+    if ((m = expr.match(/^([A-Z]\w*)\.new\(/))) return m[1];
+    if ((m = expr.match(/^((?:[A-Za-z_]\w*\.)*)([A-Za-z_]\w*)$/))) {
+      const path = m[1] ? m[1].slice(0, -1).split('.') : [];
+      if (path.length === 0) return typeName(s, f, m[2], false, depth);
+      const owner = typeOfReceiver(s, f, path[path.length - 1], path.length > 1, depth);
+      if (owner === ENGINE) return null;
+      if (owner) {
+        for (const c of chain(owner)) if (c.memberTypes[m[2]]) return c.memberTypes[m[2]];
+        return null;
+      }
+      return only(memberTypeTable[m[2]]);
+    }
+    if ((m = expr.match(/^((?:[A-Za-z_]\w*\.)*)([A-Za-z_]\w*)\(/)) && closesAtEnd(expr, m[0].length - 1)) {
+      const target = resolveCall(s, f, m[1] ? m[1].slice(0, -1).split('.') : [], m[2], depth);
+      return target ? target.f.returns : null;
     }
     return null;
-  };
+  }
+
+  /** Type name of the elements of `a.b` (a typed array). */
+  function elementOfExpr(s, f, expr, depth) {
+    const path = expr.split('.');
+    const name = path.pop();
+    if (path.length === 0) {
+      if (f.localElements[name]) return f.localElements[name];
+      if (!f.inner) for (const c of chain(s)) if (c.memberElements[name]) return c.memberElements[name];
+    } else {
+      const owner = typeOfReceiver(s, f, path[path.length - 1], path.length > 1, depth);
+      if (owner && owner !== ENGINE) {
+        for (const c of chain(owner)) if (c.memberElements[name]) return c.memberElements[name];
+      }
+    }
+    return only(memberElementTable[name]);
+  }
 
   const uses = new Map(scripts.map((s) => [s, new Set()]));
   const addCall = (s, f, target, guess) => {
@@ -361,7 +563,7 @@ function analyse(root) {
         const before = body.slice(0, m.index);
         if (!before.endsWith('.')) {
           if (/\bfunc\s+$/.test(before)) continue;
-          const target = findFunc(s, name);
+          const target = findFunc(s, name, f.inner);
           if (target) addCall(s, f, target, false);
           continue;
         }
@@ -369,12 +571,19 @@ function analyse(root) {
         const rm = before.match(/(\.)?\s*([A-Za-z_]\w*)\.$/);
         let target = null;
         let guess = false;
+        let plain = false; // the receiver is one of Godot's plain types: no matching by name
         if (rm) {
           const owner = typeOfReceiver(s, f, rm[2], !!rm[1]);
-          if (owner) target = findFunc(owner, name);
+          if (owner === ENGINE) plain = true;
+          else if (owner) target = findFunc(owner, name);
+        } else {
+          // `things[i].name(…)`: the receiver is one element of a typed array.
+          const im = before.match(/([A-Za-z_][\w.]*)\[[^\[\]]*\]\.$/);
+          const element = im ? elementOfExpr(s, f, im[1], 0) : null;
+          if (element && named(element)) target = findFunc(named(element), name);
         }
-        if (!target && funcDefs[name]?.length === 1 && !GENERIC.has(name) && !ENGINE_CALLBACKS[name]) {
-          target = funcDefs[name][0];
+        if (!target && !plain &&!GENERIC.has(name) && !ENGINE_CALLBACKS[name]) {
+          target = uniqueDef(name);
           guess = true;
         }
         if (target) addCall(s, f, target, guess);
@@ -382,38 +591,79 @@ function analyse(root) {
       // Own functions passed around by name (signal handlers, callables).
       for (const c of chain(s)) {
         for (const other of c.funcs) {
-          if (other === f || ENGINE_CALLBACKS[other.name]) continue;
+          if (other === f || other.inner || ENGINE_CALLBACKS[other.name]) continue;
           const re = new RegExp(`(?<![\\w.])${other.name}\\b(?!\\s*\\()`);
           if (re.test(body) && !(other.name in f.localTypes)) addCall(s, f, { s: c, f: other }, false);
         }
       }
-      // Signals: emitted here, or connected here to a handler.
+      // Another script's function passed around by name (`Settings.set_volume`).
+      for (const m of body.matchAll(/(?<![\w.])([A-Za-z_]\w*)\.([A-Za-z_]\w*)\b(?!\s*\()/g)) {
+        if (!funcDefs[m[2]]) continue;
+        const owner = typeOfReceiver(s, f, m[1], false);
+        const target = owner && owner !== ENGINE ? findFunc(owner, m[2]) : null;
+        if (target) addCall(s, f, target, false);
+      }
+      // Functions named in a string (`&"on_board_start"`, `call("name")`): by name only.
+      for (const m of f.src.matchAll(/&"([A-Za-z_]\w*)"|\b(?:call|call_deferred|callv|has_method|Callable)\(\s*(?:[\w.]+\s*,\s*)?"([A-Za-z_]\w*)"/g)) {
+        const name = m[1] || m[2];
+        if (GENERIC.has(name) || ENGINE_CALLBACKS[name]) continue;
+        const target = findFunc(s, name, f.inner) || uniqueDef(name);
+        if (target) addCall(s, f, target, true);
+      }
+      // Signals: emitted here, connected here to a handler, or waited for here.
       const resolveSignal = (expr) => {
         const parts = expr.split('.');
         const name = parts.pop();
-        if (parts.length === 0) return findSignal(s, name);
+        if (parts.length === 0) return f.inner ? null : findSignal(s, name);
         const owner = typeOfReceiver(s, f, parts[parts.length - 1], parts.length > 1);
+        if (owner === ENGINE) return null;
         if (owner) {
           const found = findSignal(owner, name);
           if (found) return found;
         }
+        if (GENERIC_SIGNALS.has(name)) return null;
         return signalDefs[name]?.length === 1 ? signalDefs[name][0] : null;
       };
-      for (const m of body.matchAll(/([A-Za-z_][\w.]*)\.emit\s*\(/g)) {
+      const hears = (found, listener) => {
+        if (!found.g.listeners.some((e) => e.s === listener.s && e.f === listener.f)) found.g.listeners.push(listener);
+        if (found.s !== s) uses.get(s).add(found.s);
+      };
+      for (const m of body.matchAll(/([A-Za-z_][\w.]*)\.emit\b/g)) {
         const found = resolveSignal(m[1]);
         if (found && !found.g.emitters.some((e) => e.s === s.path && e.f === f.name)) {
           found.g.emitters.push({ s: s.path, f: f.name });
           if (found.s !== s) uses.get(s).add(found.s);
         }
       }
-      for (const m of body.matchAll(/([A-Za-z_][\w.]*)\.connect\s*\(\s*([A-Za-z_][\w.]*)\s*[,)]/g)) {
-        const handlerName = m[2].split('.').pop();
-        const handler = m[2].includes('.') && !m[2].startsWith('self.') ? null : findFunc(s, handlerName);
+      for (const m of body.matchAll(/([A-Za-z_][\w.]*)\.connect\s*\(\s*([A-Za-z_][\w.]*)?/g)) {
+        // The handler: a function's name (maybe with .bind), or code written in place.
+        const what = (m[2] || '').replace(/\.(bind|unbind|call_deferred)$/, '');
+        let handler = null;
+        if (what && what !== 'func' && !what.endsWith('.emit')) {
+          const path = what.split('.');
+          const name = path.pop();
+          if (path.length === 0 || (path.length === 1 && path[0] === 'self')) handler = findFunc(s, name, f.inner);
+          else {
+            const owner = typeOfReceiver(s, f, path[path.length - 1], path.length > 1);
+            if (owner && owner !== ENGINE) handler = findFunc(owner, name);
+          }
+        }
         if (handler && !handler.f.handles.includes(m[1])) handler.f.handles.push(m[1]);
         const found = resolveSignal(m[1]);
-        if (found) {
-          found.g.listeners.push({ s: s.path, f: handler ? handler.f.name : f.name });
-          if (found.s !== s) uses.get(s).add(found.s);
+        if (found) hears(found, handler ? { s: handler.s.path, f: handler.f.name } : { s: s.path, f: f.name });
+      }
+      for (const m of body.matchAll(/\bawait\s+([A-Za-z_][\w.]*)(?![\w.]*\s*\()/g)) {
+        const found = resolveSignal(m[1]);
+        if (found) hears(found, { s: s.path, f: f.name });
+      }
+    }
+
+    // Functions a property's set/get code runs.
+    for (const a of s.accessors) {
+      for (const c of chain(s)) {
+        for (const other of c.funcs) {
+          if (other.inner || ENGINE_CALLBACKS[other.name]) continue;
+          if (new RegExp(`(?<![\\w.])${other.name}\\b`).test(a.code)) other.handles.push(`${a.name} (when ${a.set ? 'set' : 'read'})`);
         }
       }
     }
@@ -451,11 +701,11 @@ function analyse(root) {
       }
     } else {
       const cm = text.match(/\[gd_resource[^\]]*script_class="(\w+)"/);
-      const owner = cm && byClass[cm[1]] ? byClass[cm[1]] : [...attached][0];
-      if (owner) {
-        const dir = path.posix.dirname(file);
-        owner.data[dir] = (owner.data[dir] || 0) + 1;
-      }
+      // The script the file is made of, and those of the parts it holds.
+      const owners = new Set(attached);
+      if (cm && byClass[cm[1]]) owners.add(byClass[cm[1]]);
+      const dir = path.posix.dirname(file);
+      for (const owner of owners) owner.data[dir] = (owner.data[dir] || 0) + 1;
     }
   }
 
@@ -521,6 +771,7 @@ function build(root, outDir) {
         return {
           name: f.name, sig: f.sig, line: f.line, doc: f.doc, static: f.static, private: f.private,
           engine: f.engine, src: f.src, calls: f.calls, calledBy: f.calledBy, handles: f.handles,
+          overrides: f.overrides, overriddenBy: f.overriddenBy,
           explain: state === 'missing' ? '' : explanations[s.path][f.name].text,
           stale: state === 'stale',
         };

@@ -1,7 +1,6 @@
 # TODO
 
 ## Now
-- **Atlas on Love Will Find**: run it there; fix whatever the parser misses on a second codebase.
 
 ## Next
 - **`/release`**: one command for a game: run all tests, bump the version, draft patch notes from `done.md`, export Web and Windows, zip, push to itch.io with butler.

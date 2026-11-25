@@ -30,3 +30,9 @@ the function's code: when a function changes, its explanation shows as outdated 
 
 Links between functions are found by reading the code, not by running it: a dashed chip
 means "matched by name only", and "no caller found" is a hint, not a proof.
+
+What it follows: calls (also through typed variables, typed arrays and what a function
+returns), functions passed by name or named in a string (`&"on_board_start"`), signals
+(sent, connected, waited for with `await`), a property's `set` code, functions of inner
+classes, and a script's own version of a function of the script it extends ("Own version
+of" / "Other versions"). Scripts used by data files (`.tres`) show which folders use them.
