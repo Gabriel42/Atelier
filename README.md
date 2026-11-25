@@ -10,6 +10,7 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 |---|---|
 | `tools/atlas/` | **Code Atlas**: turns a Godot project's code into one browsable page (map of the folders, every script and function explained, who calls whom, signals) |
 | `skills/` | Claude skills that drive the tools (`/atlas`); the source of truth, copied to `~/.claude/skills/` |
+| `library/` | **Asset library**: art, sound, fonts and 3D files, sorted by type, each with its license. `library/sources.md` lists the free repositories to get more |
 
 ## Code Atlas
 
