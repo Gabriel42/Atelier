@@ -1,6 +1,8 @@
 # TODO
 
 ## Now
+- **Atlas on Love Will Find**: run it there; fix whatever the parser misses on a second codebase.
+- **Checklist: tune the list**: go through each game's report with Gabriel, mark the items a game does not need in `decisions.json`, and fix the patterns that give wrong "There" or "Missing" answers. Two known gaps: a game's own title-screen code can count as "Quit to menu"; "Options menu" needs a closer look on Pierresavant.
 
 ## Next
 - **itch.io exporter**: first upload done (Pierresavant 0.1.1). At the second upload, check on itch.io that the "played in the browser" tick is kept. Still to run for real on Love Will Find (needs its page).

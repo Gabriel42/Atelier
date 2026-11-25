@@ -9,8 +9,9 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 | Folder | What it is |
 |---|---|
 | `tools/atlas/` | **Code Atlas**: turns a Godot project's code into one browsable page (map of the folders, every script and function explained, who calls whom, signals) |
+| `tools/checklist/` | **Game essentials checklist**: the systems almost every game needs (title menu, save, options, language, debug panel, and so on) and whether a project has each one |
 | `tools/itch/` | **itch.io exporter**: builds a game and uploads it to its itch.io page in one command |
-| `skills/` | Claude skills that drive the tools (`/atlas`, `/itch`); the source of truth, copied to `~/.claude/skills/` |
+| `skills/` | Claude skills that drive the tools (`/atlas`, `/checklist`, `/itch`); the source of truth, copied to `~/.claude/skills/` |
 | `library/` | **Asset library**: art, sound, fonts and 3D files, sorted by type, each with its license. `library/sources.md` lists the free repositories to get more |
 
 ## itch.io exporter
@@ -63,3 +64,23 @@ returns), functions passed by name or named in a string (`&"on_board_start"`), s
 (sent, connected, waited for with `await`), a property's `set` code, functions of inner
 classes, and a script's own version of a function of the script it extends ("Own version
 of" / "Other versions"). Scripts used by data files (`.tres`) show which folders use them.
+
+## Game essentials checklist
+
+Needs Node 18+. From anywhere:
+
+```
+node tools/checklist/checklist.mjs <project folder>      # writes <project>/docs/checklist/checklist.md
+```
+
+The list is in `tools/checklist/essentials.mjs`: about 35 systems, in eight groups (start
+and menus, saving, settings, language, debug, information and feedback, sound, making and
+shipping). Each one is looked for in the game's scripts and scenes, and the report says
+"There", "Check" (only a file name matches) or "Missing", with the files it found.
+
+To say an item is not needed for a game, add it to `<project>/docs/checklist/decisions.json`
+with a reason, e.g. `{ "language-picker": "English only" }`. In a Claude session inside a
+game project, type `/checklist`.
+
+It reads words, not behaviour: "There" means the code mentions the system, so check the
+evidence. Tests and tools are only checked by file name.
