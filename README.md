@@ -9,8 +9,34 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 | Folder | What it is |
 |---|---|
 | `tools/atlas/` | **Code Atlas**: turns a Godot project's code into one browsable page (map of the folders, every script and function explained, who calls whom, signals) |
-| `skills/` | Claude skills that drive the tools (`/atlas`); the source of truth, copied to `~/.claude/skills/` |
+| `tools/itch/` | **itch.io exporter**: builds a game and uploads it to its itch.io page in one command |
+| `skills/` | Claude skills that drive the tools (`/atlas`, `/itch`); the source of truth, copied to `~/.claude/skills/` |
 | `library/` | **Asset library**: art, sound, fonts and 3D files, sorted by type, each with its license. `library/sources.md` lists the free repositories to get more |
+
+## itch.io exporter
+
+Needs Node 18+, Godot with its export templates, and butler (itch.io's uploader).
+
+```
+node tools/itch/itch.mjs <project folder>               # build, then upload to itch.io
+node tools/itch/itch.mjs <project folder> --dry-run     # build only, upload nothing
+node tools/itch/itch.mjs <project folder> --check       # what is ready, what is missing
+node tools/itch/itch.mjs <project folder> --page https://you.itch.io/your-game   # set the page (once)
+node tools/itch/itch.mjs <project folder> --only web    # one build only (web, windows, linux, mac)
+```
+
+It uses the export presets the game already has (Web and Windows unless told otherwise),
+builds them fresh into `<project>/build/itch/` and uploads each one, tagged with the
+version from `project.godot`. In a Claude session inside a game project, type `/itch`.
+
+To do once per computer: put butler in `C:\Users\gabri\butler\` (from
+https://itchio.itch.io/butler) and run `butler login`. To do once per game: create the
+page on itch.io, give it to the tool with `--page` (kept in `<project>/itch.json`), and
+after the first Web upload, on the page's "Edit game" screen, set "Kind of project" to
+HTML and tick "This file will be played in the browser" next to the html5 file.
+
+It finds Godot in `C:\Users\gabri\Godot\` (the version the project uses); set `GODOT` or
+`BUTLER` to use another copy.
 
 ## Code Atlas
 

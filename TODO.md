@@ -3,7 +3,8 @@
 ## Now
 
 ## Next
-- **`/release`**: one command for a game: run all tests, bump the version, draft patch notes from `done.md`, export Web and Windows, zip, push to itch.io with butler.
+- **itch.io exporter**: first upload done (Pierresavant 0.1.1). At the second upload, check on itch.io that the "played in the browser" tick is kept. Still to run for real on Love Will Find (needs its page).
+- **`/release`**: one command for a game: run all tests, bump the version, draft patch notes from `done.md`, then call the itch.io exporter (`tools/itch/`).
 - **Content and balance dashboard**: a page that reads a game's `.tres` files and CSVs: recipe graph, unlock chain, items nothing drops or uses, a pacing simulation.
 - **Screenshot gallery**: keep each commit's screenshots and show before/after with a slider.
 
