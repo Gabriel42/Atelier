@@ -24,7 +24,14 @@ Needs Node 18+. Double-click `atelier.cmd`, or from the Atelier folder:
 node tools/menu/menu.mjs                      # build the page and open it with working buttons
 node tools/menu/menu.mjs --build              # build the page only, to upload it
 node tools/menu/menu.mjs <game folder>...     # these games instead of the ones next to Atelier
+node tools/menu/menu.mjs --shortcut           # make Atelier.lnk, a shortcut to pin to the taskbar
 ```
+
+**In the taskbar**: `--shortcut` writes `Atelier.lnk` in the Atelier folder (with the
+Atelier icon; git ignores it, since it holds this computer's paths). Right-click it, then
+"Show more options" > "Pin to taskbar", or drag it onto the taskbar. A click opens the
+menu in the browser; its small window starts minimized, and closing it stops the menu.
+Clicking again while the menu runs just opens the page again.
 
 The games in the folder that holds Atelier (Pierresavant, Love Will Find, Philosopher's
 Paradise...) are listed on the left. Each game's page shows its version, last commit and

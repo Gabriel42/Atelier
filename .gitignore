@@ -8,3 +8,6 @@ library/**
 
 # Built pages (the main menu copy to upload)
 build/
+
+# The taskbar shortcut (made per computer by: node tools/menu/menu.mjs --shortcut)
+Atelier.lnk

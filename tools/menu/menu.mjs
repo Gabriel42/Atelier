@@ -5,6 +5,7 @@
 //   node menu.mjs --build            build the page only (build/menu/index.html, ready to upload)
 //   node menu.mjs <game folder>...   use these games instead of the ones next to Atelier
 //   node menu.mjs --port 4310        use another port
+//   node menu.mjs --shortcut         make Atelier.lnk (Windows), a shortcut to pin to the taskbar
 //
 // The page lists the Godot games in the folder that holds Atelier. Opened through this
 // script (http://localhost:4310), its buttons run the tools and show their output. Opened
@@ -236,6 +237,30 @@ const portAt = args.indexOf('--port');
 const port = portAt >= 0 ? Number(args[portAt + 1]) || 4310 : 4310;
 const firstPort = port;
 const folders = args.filter((a, i) => !a.startsWith('--') && !(portAt >= 0 && i === portAt + 1));
+
+if (flags.has('--shortcut')) process.exit(await shortcut());
+
+/** Writes Atelier.lnk in the Atelier folder: a Windows shortcut that opens the menu, to pin to the taskbar. */
+async function shortcut() {
+  if (process.platform !== 'win32') { console.log('The shortcut is for Windows only.'); return 1; }
+  const lnk = path.join(ATELIER, 'Atelier.lnk');
+  const script = `$s = (New-Object -ComObject WScript.Shell).CreateShortcut($env:LNK)
+$s.TargetPath = $env:NODE
+$s.Arguments = '"' + $env:MENU + '"'
+$s.WorkingDirectory = $env:ATELIER
+$s.IconLocation = $env:ICON + ',0'
+$s.WindowStyle = 7
+$s.Description = 'Atelier: the menu of Gabriel''s gamedev tools'
+$s.Save()`;
+  const ok = await new Promise((resolve) => execFile('powershell', ['-NoProfile', '-NonInteractive', '-Command', script], {
+    env: { ...process.env, LNK: lnk, NODE: process.execPath, MENU: fileURLToPath(import.meta.url), ATELIER, ICON: path.join(HERE, 'atelier.ico') },
+    windowsHide: true,
+  }, (err, _out, errText) => { if (err) console.log(`Could not make the shortcut: ${errText || err.message}`); resolve(!err); }));
+  if (!ok) return 1;
+  console.log(`Shortcut made: ${lnk}`);
+  console.log('To put it in the taskbar: right-click it, then "Show more options" > "Pin to taskbar" (or drag it onto the taskbar).');
+  return 0;
+}
 
 const games = findGames(folders);
 const missing = games.find((g) => !fs.existsSync(path.join(g, 'project.godot')));
