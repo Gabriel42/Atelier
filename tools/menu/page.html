@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Atelier</title>
+<style>
+:root {
+  --bg: #f4f2ed; --panel: #fffdf9; --raised: #ffffff; --ink: #26231f; --muted: #6f6a61; --faint: #9b958a; --line: #e3ddd2; --line-strong: #cfc7b8;
+  --accent: #9a5a14; --accent-ink: #fffaf2; --accent-soft: #f3e6d2; --well: #ece8e0; --hover: #f1ece3;
+  --ok: #3f7a58; --ok-soft: #dcebe1; --warn: #b0650f; --warn-soft: #fbe9d3; --bad: #b3261e; --bad-soft: #f8dcd8;
+  --term: #1d1b19; --term-ink: #e6e1d8; --shadow: 0 1px 2px rgba(40,30,15,.06), 0 4px 14px rgba(40,30,15,.06);
+  --shadow-lg: 0 10px 40px rgba(30,20,10,.22);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #191816; --panel: #201f1c; --raised: #262421; --ink: #ebe6dd; --muted: #a59e92; --faint: #7a746a; --line: #33312d; --line-strong: #45423c;
+    --accent: #e2a85c; --accent-ink: #231a0d; --accent-soft: #3a2f1f; --well: #1c1b19; --hover: #2a2825;
+    --ok: #8fc2a3; --ok-soft: #1f3327; --warn: #f0b060; --warn-soft: #3d2b17; --bad: #f08a80; --bad-soft: #3f1f1c;
+    --term: #121110; --term-ink: #e6e1d8; --shadow: 0 1px 2px rgba(0,0,0,.3); --shadow-lg: 0 10px 40px rgba(0,0,0,.5);
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "Segoe UI Variable Text", "Segoe UI", system-ui, sans-serif; display: flex; overflow: hidden; }
+button, input { font: inherit; color: inherit; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.mono { font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+kbd { font: 11px "Cascadia Code", Consolas, monospace; padding: 1px 5px; border: 1px solid var(--line-strong); border-bottom-width: 2px; border-radius: 4px; color: var(--muted); background: var(--panel); }
+
+/* ---------- side bar ---------- */
+#side { width: 248px; flex: none; height: 100vh; display: flex; flex-direction: column; border-right: 1px solid var(--line); background: var(--panel); }
+.brand { padding: 18px 18px 14px; }
+.brand h1 { margin: 0; font-size: 20px; letter-spacing: -.01em; }
+.brand div { color: var(--muted); font-size: 12px; }
+.label { margin: 14px 18px 6px; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--faint); font-weight: 600; }
+#nav { flex: 1; overflow-y: auto; padding-bottom: 10px; }
+.item { display: flex; align-items: center; gap: 10px; width: calc(100% - 16px); margin: 1px 8px; padding: 7px 10px; border: 0; border-radius: 8px; background: none; text-align: left; cursor: pointer; }
+.item:hover { background: var(--hover); }
+.item.on { background: var(--accent-soft); }
+.item.on .nm { color: var(--accent); font-weight: 600; }
+.item .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.item .sm { font-size: 11px; color: var(--faint); }
+.item kbd { opacity: 0; transition: opacity .15s; }
+#side:hover .item kbd { opacity: 1; }
+.mark { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; font-weight: 700; font-size: 13px; color: #fff; flex: none; }
+.mark.big { width: 56px; height: 56px; border-radius: 13px; font-size: 24px; }
+.side-foot { border-top: 1px solid var(--line); padding: 12px 18px; font-size: 12px; color: var(--muted); display: grid; gap: 8px; }
+.mode { display: flex; align-items: center; gap: 7px; }
+.mode .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+body.live .mode .dot { background: var(--ok); box-shadow: 0 0 0 3px var(--ok-soft); }
+.side-foot button { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 6px 10px; border: 1px solid var(--line); border-radius: 7px; background: var(--bg); color: var(--muted); cursor: pointer; }
+.side-foot button:hover { border-color: var(--accent); color: var(--ink); }
+
+/* ---------- main ---------- */
+#main { flex: 1; min-width: 0; height: 100vh; overflow-y: auto; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 28px 32px 80px; }
+.head { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.head h2 { margin: 0; font-size: 26px; letter-spacing: -.015em; line-height: 1.15; }
+.head .meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 5px; color: var(--muted); font-size: 12px; }
+.pill { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px; background: var(--well); color: var(--muted); font-size: 12px; white-space: nowrap; }
+.pill.ok { background: var(--ok-soft); color: var(--ok); } .pill.warn { background: var(--warn-soft); color: var(--warn); } .pill.bad { background: var(--bad-soft); color: var(--bad); }
+.head .right { margin-left: auto; display: flex; gap: 8px; }
+
+.btn { display: inline-flex; align-items: center; gap: 7px; padding: 6px 13px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--raised); cursor: pointer; white-space: nowrap; transition: border-color .12s, background .12s, transform .05s; }
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:active:not(:disabled) { transform: translateY(1px); }
+.btn.main { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.btn.main:hover:not(:disabled) { filter: brightness(1.07); }
+.btn.risky { color: var(--bad); }
+.btn.risky:hover:not(:disabled) { border-color: var(--bad); background: var(--bad-soft); }
+.btn.ghost { border-color: transparent; background: none; color: var(--muted); }
+.btn.ghost:hover:not(:disabled) { color: var(--ink); background: var(--hover); border-color: transparent; }
+.btn:disabled { opacity: .45; cursor: default; }
+.btn svg { width: 15px; height: 15px; flex: none; }
+.btn.running { pointer-events: none; }
+.btn.running::after { content: ""; width: 11px; height: 11px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .7s linear infinite; }
+
+/* tool tiles */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+@media (max-width: 1100px) { .tiles { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 760px) { .tiles { grid-template-columns: 1fr; } #side { width: 72px; } .brand div, .item .nm, .item .sm, .item kbd, .label, .side-foot span:not(.dot) { display: none; } }
+.tile { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; display: flex; flex-direction: column; gap: 14px; box-shadow: var(--shadow); }
+.tile-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tile h3 { margin: 0; font-size: 15px; }
+.tile .what { color: var(--muted); font-size: 12px; margin-top: 2px; }
+.stat { display: flex; align-items: center; gap: 14px; min-height: 64px; }
+.ring { position: relative; width: 64px; height: 64px; flex: none; }
+.ring svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+.ring circle { fill: none; stroke-width: 7; }
+.ring .track { stroke: var(--well); }
+.ring .val { stroke-linecap: round; transition: stroke-dasharray .6s ease; }
+.ring b { position: absolute; inset: 0; display: grid; place-items: center; font-size: 14px; }
+.facts { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.facts b { color: var(--ink); font-weight: 600; }
+.big-text { font-size: 22px; font-weight: 600; color: var(--ink); line-height: 1.2; }
+.acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+.c-ok { color: var(--ok); } .c-warn { color: var(--warn); } .c-bad { color: var(--bad); }
+
+/* checklist details */
+.section { margin-top: 30px; }
+.section-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.section-head h3 { margin: 0; font-size: 16px; }
+.seg { display: inline-flex; padding: 3px; background: var(--well); border-radius: 9px; gap: 2px; }
+.seg button { border: 0; background: none; padding: 4px 11px; border-radius: 7px; cursor: pointer; color: var(--muted); font-size: 13px; }
+.seg button .n { font-size: 11px; opacity: .8; margin-left: 3px; }
+.seg button.on { background: var(--raised); color: var(--ink); box-shadow: var(--shadow); }
+.search { margin-left: auto; position: relative; }
+.search input { width: 220px; padding: 6px 10px 6px 30px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); }
+.search input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.search svg { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--faint); }
+.groups { display: grid; gap: 12px; }
+.group { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.group-name { padding: 9px 16px; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--bg); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
+.check { border-top: 1px solid var(--line); }
+.check:first-of-type { border-top: 0; }
+.check > button { display: flex; align-items: center; gap: 12px; width: 100%; padding: 10px 16px; border: 0; background: none; text-align: left; cursor: pointer; }
+.check > button:hover { background: var(--hover); }
+.check .nm { flex: 1; }
+.check .chev { width: 14px; height: 14px; color: var(--faint); transition: transform .15s; flex: none; }
+.check.open .chev { transform: rotate(90deg); }
+.check .more { display: none; padding: 0 16px 14px 44px; color: var(--muted); font-size: 13px; }
+.check.open .more { display: block; }
+.check .files { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.check .files code { background: var(--well); border-radius: 5px; padding: 1px 6px; }
+.sdot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.sdot.there { background: var(--ok); } .sdot.check { background: var(--warn); } .sdot.missing { background: var(--bad); } .sdot.not-needed { background: var(--faint); }
+.empty { color: var(--muted); padding: 28px; border: 1px dashed var(--line-strong); border-radius: 12px; text-align: center; }
+
+/* ---------- activity panel ---------- */
+#activity { width: 400px; flex: none; height: 100vh; border-left: 1px solid var(--line); background: var(--panel); display: none; flex-direction: column; }
+body.show-activity #activity { display: flex; }
+.act-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+.act-head h3 { margin: 0; font-size: 15px; flex: 1; }
+#runs { flex: 1; overflow-y: auto; padding: 10px; display: grid; gap: 10px; align-content: start; }
+.run { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--raised); }
+.run-top { display: flex; align-items: center; gap: 9px; padding: 9px 12px; cursor: pointer; }
+.run-top .t { flex: 1; min-width: 0; }
+.run-top .t b { display: block; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.run-top .t span { font-size: 11px; color: var(--faint); }
+.run pre { margin: 0; max-height: 340px; overflow: auto; padding: 10px 12px; background: var(--term); color: var(--term-ink); white-space: pre-wrap; word-break: break-word; display: none; }
+.run.open pre { display: block; }
+.st { width: 18px; height: 18px; border-radius: 50%; display: grid; place-items: center; flex: none; font-size: 11px; font-weight: 700; }
+.st.ok { background: var(--ok-soft); color: var(--ok); } .st.bad { background: var(--bad-soft); color: var(--bad); }
+.st.going { border: 2px solid var(--accent); border-right-color: transparent; animation: spin .7s linear infinite; }
+
+/* ---------- palette, dialog, toast ---------- */
+.veil { position: fixed; inset: 0; background: rgba(20,15,8,.35); display: none; align-items: flex-start; justify-content: center; padding-top: 14vh; z-index: 10; }
+.veil.open { display: flex; }
+.box { width: min(560px, 92vw); background: var(--panel); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow-lg); overflow: hidden; animation: pop .14s ease; }
+#pal-input { width: 100%; padding: 15px 18px; border: 0; border-bottom: 1px solid var(--line); background: none; font-size: 15px; outline: none; }
+#pal-list { max-height: 50vh; overflow-y: auto; padding: 6px; }
+.opt { display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 8px; cursor: pointer; }
+.opt.on { background: var(--accent-soft); }
+.opt .g { margin-left: auto; font-size: 12px; color: var(--faint); }
+.opt .ic { width: 22px; text-align: center; color: var(--muted); }
+.pal-foot { display: flex; gap: 14px; padding: 8px 14px; border-top: 1px solid var(--line); font-size: 12px; color: var(--faint); }
+.dialog { padding: 22px 22px 18px; }
+.dialog h3 { margin: 0 0 8px; font-size: 17px; }
+.dialog p { margin: 0 0 14px; color: var(--muted); }
+.dialog .cmdline { display: flex; align-items: center; gap: 8px; background: var(--term); color: var(--term-ink); border-radius: 8px; padding: 9px 9px 9px 13px; margin-bottom: 14px; }
+.dialog .cmdline code { flex: 1; overflow-x: auto; white-space: nowrap; }
+.dialog .row { display: flex; justify-content: flex-end; gap: 8px; }
+#toasts { position: fixed; bottom: 18px; left: 50%; transform: translateX(-50%); display: grid; gap: 8px; z-index: 20; }
+.toast { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-radius: 10px; background: var(--term); color: var(--term-ink); box-shadow: var(--shadow-lg); font-size: 13px; animation: pop .16s ease; }
+.toast button { background: none; border: 0; color: var(--accent); cursor: pointer; padding: 0 0 0 6px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { from { opacity: 0; transform: translateY(6px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<nav id="side">
+  <div class="brand"><h1>Atelier</h1><div>Gabriel's gamedev workshop</div></div>
+  <div id="nav"></div>
+  <div class="side-foot">
+    <button id="open-pal" title="Search every action"><span>Search actions</span><kbd>Ctrl K</kbd></button>
+    <button id="open-act"><span>Activity</span><span id="act-count"></span></button>
+    <div class="mode"><span class="dot"></span><span id="mode"></span></div>
+  </div>
+</nav>
+
+<main id="main"><div class="wrap" id="view"></div></main>
+
+<aside id="activity">
+  <div class="act-head"><h3>Activity</h3><button class="btn ghost" id="clear-act">Clear</button><button class="btn ghost" id="close-act" aria-label="Close">✕</button></div>
+  <div id="runs"></div>
+</aside>
+
+<div class="veil" id="pal"><div class="box">
+  <input id="pal-input" placeholder="Type a game or an action..." autocomplete="off" spellcheck="false">
+  <div id="pal-list"></div>
+  <div class="pal-foot"><span><kbd>↑</kbd> <kbd>↓</kbd> choose</span><span><kbd>Enter</kbd> run</span><span><kbd>Esc</kbd> close</span></div>
+</div></div>
+
+<div class="veil" id="dlg"><div class="box dialog" id="dlg-box"></div></div>
+<div id="toasts"></div>
+
+<script>
+let DATA = /*__ATELIER_DATA__*/null;
+
+const LIVE = !!(DATA && location.protocol === 'http:' && /^(localhost|127\.0\.0\.1)$/.test(location.hostname) && +location.port === DATA.port);
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const q = (s) => (/[\s']/.test(s) ? `"${s}"` : s);
+const slug = (s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+const COLORS = ['#3f7f6a', '#7a4fa3', '#b0562d', '#3d6aa8', '#a3456b', '#6f7d2e', '#2f8a99', '#8a6a2f'];
+const color = (g) => COLORS[(DATA?.games ?? []).indexOf(g) % COLORS.length] || COLORS[0];
+const initials = (name) => name.split(/\s+/).filter((w) => /^[A-Za-z0-9]/.test(w)).slice(0, 2).map((w) => w[0].toUpperCase()).join('') || name[0];
+function when(iso) {
+  if (!iso) return '';
+  const d = new Date(iso), mins = Math.round((Date.now() - d) / 60000);
+  if (mins < 2) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  if (mins < 60 * 24 && d.getDate() === new Date().getDate()) return `today ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  const days = Math.round(mins / 1440);
+  return days <= 1 ? 'yesterday' : days < 30 ? `${days} days ago` : d.toLocaleDateString();
+}
+const ICON = {
+  play: '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M4 2.8v10.4c0 .5.6.8 1 .5l8-5.2a.6.6 0 0 0 0-1L5 2.3c-.4-.3-1 0-1 .5z"/></svg>',
+  open: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M9 2.5h4.5V7M13.5 2.5 7 9M11.5 9.5v3a1 1 0 0 1-1 1h-7a1 1 0 0 1-1-1v-7a1 1 0 0 1 1-1h3"/></svg>',
+  up: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M8 11V2.5M4.5 6 8 2.5 11.5 6M2.5 10.5v2a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-2"/></svg>',
+  chev: '<svg class="chev" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="m6 3.5 4.5 4.5L6 12.5"/></svg>',
+  search: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="7" cy="7" r="4.5"/><path d="m10.5 10.5 3 3"/></svg>',
+};
+
+// ---------- actions ----------
+
+const ACTIONS = {
+  atlas: { label: 'Build the Code Atlas', short: 'Build', tool: 'atlas', cmd: (d) => `node tools/atlas/atlas.mjs ${d}` },
+  checklist: { label: 'Run the checklist', short: 'Run', tool: 'checklist', cmd: (d) => `node tools/checklist/checklist.mjs ${d}` },
+  'itch-check': { label: 'itch.io: what is ready', short: 'What is ready', tool: 'itch', cmd: (d) => `node tools/itch/itch.mjs ${d} --check` },
+  'itch-build': { label: 'itch.io: build only', short: 'Build only', tool: 'itch', cmd: (d) => `node tools/itch/itch.mjs ${d} --dry-run` },
+  'itch-upload': { label: 'itch.io: build and upload', short: 'Upload', tool: 'itch', cmd: (d) => `node tools/itch/itch.mjs ${d}` },
+  library: { label: 'Open the asset library', short: 'Open the library', tool: 'library', cmd: () => 'node tools/library/library.mjs library' },
+};
+const OPENS = { atlas: 'Open the Code Atlas', checklist: 'Open the checklist report' };
+
+let sel = 0, filter = 'todo', search = '', runs = [], busy = null, runId = 0;
+const openChecks = new Set();
+
+function select(i) {
+  sel = i;
+  const name = i === 'library' ? 'library' : slug(DATA.games[i].name);
+  history.replaceState(null, '', `#${name}`);
+  render();
+  $('#main').scrollTop = 0;
+}
+
+async function act(action, game) {
+  const a = ACTIONS[action], g = DATA.games[game];
+  const dir = g ? q(`../${g.folder}`) : '';
+  if (!LIVE) return showCommand(a, a.cmd(dir), g);
+  if (busy) return toast('Another tool is still running.');
+  if (action === 'itch-upload') {
+    const ok = await ask(`Upload ${g.name} ${g.version} to itch.io?`, 'Players will see the new version on the game\'s page. It builds the game fresh first.', 'Build and upload', true);
+    if (!ok) return;
+  }
+  run(action, game);
+}
+
+async function run(action, game) {
+  const g = DATA.games[game];
+  const r = { id: ++runId, title: ACTIONS[action].label, game: g?.name || 'Every game', text: '', state: 'going', start: Date.now(), open: true };
+  runs.forEach((x) => (x.open = false));
+  runs.unshift(r);
+  busy = { action, game };
+  document.body.classList.add('show-activity');
+  render(); renderRuns();
+  try {
+    const res = await fetch('/api/run', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Atelier': '1' }, body: JSON.stringify({ action, game }) });
+    const reader = res.body.getReader(), dec = new TextDecoder();
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      r.text += dec.decode(value, { stream: true });
+      updateRun(r);
+    }
+  } catch (e) { r.text += `\nCould not reach the menu (${e.message}). Is its window still open?\n[exit 1]`; }
+  const m = /\n?\[exit (-?\d+)\]\s*$/.exec(r.text);
+  const code = m ? +m[1] : 1;
+  if (m) r.text = r.text.slice(0, m.index);
+  r.state = code === 0 ? 'ok' : 'bad';
+  r.end = Date.now();
+  busy = null;
+  await refresh();
+  renderRuns();
+  if (code === 0 && action === 'atlas') openFile('atlas', game);
+  toast(`${r.title}${g ? ` · ${g.name}` : ''}: ${code === 0 ? 'done' : 'stopped with an error'}`, code === 0 ? null : ['Show', () => document.body.classList.add('show-activity')]);
+}
+
+function openFile(what, game) {
+  if (!LIVE) return showCommand({ label: OPENS[what] }, null, DATA.games[game], what);
+  fetch('/api/open', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Atelier': '1' }, body: JSON.stringify({ what, game }) });
+}
+
+async function refresh() {
+  try { DATA = await (await fetch('/api/state', { cache: 'no-store' })).json(); render(); } catch { /* keep what we have */ }
+}
+
+// ---------- side bar ----------
+
+function renderNav() {
+  const games = DATA?.games ?? [];
+  const pct = (g) => (g.checklist ? Math.round((g.checklist.there / Math.max(1, g.checklist.there + g.checklist.check + g.checklist.missing)) * 100) : null);
+  $('#nav').innerHTML = `<div class="label">Games</div>` + games.map((g, i) => `
+    <button class="item ${sel === i ? 'on' : ''}" data-sel="${i}" title="${esc(g.name)}">
+      <span class="mark" style="background:${color(g)}">${esc(initials(g.name))}</span>
+      <span class="nm">${esc(g.name)}<br><span class="sm">${g.version ? `v${esc(g.version)}` : 'no version'}${pct(g) !== null ? ` · ${pct(g)}% essentials` : ''}</span></span>
+      ${i < 9 ? `<kbd>${i + 1}</kbd>` : ''}
+    </button>`).join('') + `
+    <div class="label">Shared</div>
+    <button class="item ${sel === 'library' ? 'on' : ''}" data-sel="library">
+      <span class="mark" style="background:var(--accent)">A</span><span class="nm">Asset library<br><span class="sm">art, sound, fonts, 3D</span></span><kbd>L</kbd>
+    </button>`;
+  $('#mode').textContent = LIVE ? 'Live on this computer' : !DATA ? 'Template (no games)' : `Copy built ${when(DATA.built)}`;
+  $('#act-count').textContent = runs.length ? String(runs.length) : '';
+}
+
+// ---------- game page ----------
+
+function ring(value, total, color, label) {
+  const r = 26, c = 2 * Math.PI * r, part = total ? Math.min(1, value / total) : 0;
+  return `<div class="ring"><svg viewBox="0 0 64 64"><circle class="track" cx="32" cy="32" r="${r}"/>
+    ${part > 0 ? `<circle class="val" cx="32" cy="32" r="${r}" stroke="${color}" stroke-dasharray="${part * c} ${c}"/>` : ''}</svg><b>${label}</b></div>`;
+}
+
+function button(action, game, cls = '') {
+  const a = ACTIONS[action];
+  const going = busy && busy.action === action && busy.game === game;
+  const icon = action === 'itch-upload' ? ICON.up : ICON.play;
+  return `<button class="btn ${cls} ${going ? 'running' : ''}" data-act="${action}" data-game="${game}" ${busy && !going && LIVE ? 'disabled' : ''} title="${esc(a.label)}">${icon}${esc(a.short)}</button>`;
+}
+const openButton = (what, game, enabled) => `<button class="btn ghost" data-open="${what}" data-game="${game}" ${enabled ? '' : 'disabled'}>${ICON.open}Open</button>`;
+
+function atlasTile(g, i) {
+  const a = g.atlas;
+  const total = a ? a.ok + a.stale + a.missing : 0;
+  const pct = total ? Math.round((a.ok / total) * 100) : 0;
+  const color = !a ? 'var(--faint)' : a.missing || a.stale ? 'var(--warn)' : 'var(--ok)';
+  return `<div class="tile">
+    <div class="tile-top"><div><h3>Code Atlas</h3><div class="what">Every function explained in plain words</div></div>
+      ${g.atlasBuilt ? `<span class="pill">built ${when(g.atlasBuilt)}</span>` : '<span class="pill">not built</span>'}</div>
+    <div class="stat">${ring(a ? a.ok : 0, total, color, a ? `${pct}%` : '–')}
+      <div class="facts">${a ? `<span><b>${a.ok}</b> of ${total} functions explained</span>
+        ${a.stale ? `<span class="c-warn"><b>${a.stale}</b> outdated</span>` : ''}${a.missing ? `<span class="c-bad"><b>${a.missing}</b> not explained yet</span>` : ''}
+        <span>${a.scripts} scripts${a.missing || a.stale ? ' · write them with <span class="mono">/atlas</span>' : ''}</span>` : '<span>Could not read the code.</span>'}</div></div>
+    <div class="acts">${button('atlas', i, 'main')}${openButton('atlas', i, g.atlasBuilt)}</div>
+  </div>`;
+}
+
+function checklistTile(g, i) {
+  const c = g.checklist;
+  const total = c ? c.there + c.check + c.missing : 0;
+  const color = !c ? 'var(--faint)' : c.missing ? 'var(--warn)' : 'var(--ok)';
+  return `<div class="tile">
+    <div class="tile-top"><div><h3>Essentials checklist</h3><div class="what">What the game has and still needs</div></div>
+      ${c ? `<span class="pill">checked ${when(c.date)}</span>` : '<span class="pill">not run</span>'}</div>
+    <div class="stat">${ring(c ? c.there : 0, total, color, c ? `${c.there}/${total}` : '–')}
+      <div class="facts">${c ? `<span class="c-ok"><b>${c.there}</b> there</span><span class="c-warn"><b>${c.check}</b> to check by hand</span><span class="c-bad"><b>${c.missing}</b> missing</span>${c.notNeeded ? `<span><b>${c.notNeeded}</b> not needed</span>` : ''}`
+        : '<span>Run it to see what the game is missing.</span>'}</div></div>
+    <div class="acts">${button('checklist', i, 'main')}${openButton('checklist', i, !!c)}</div>
+  </div>`;
+}
+
+function itchTile(g, i) {
+  return `<div class="tile">
+    <div class="tile-top"><div><h3>itch.io</h3><div class="what">Build the game and put it online</div></div>
+      ${g.itch ? '<span class="pill ok">page set</span>' : '<span class="pill warn">no page yet</span>'}</div>
+    <div class="stat"><div class="facts">
+      <span class="big-text">${g.version ? `v${esc(g.version)}` : 'No version'}</span>
+      <span>${g.itch ? `<a href="${esc(g.itch)}" target="_blank" rel="noopener">${esc(g.itch.replace('https://', ''))}</a>` : 'Set the page once: see “What is ready”.'}</span>
+      <span>Web and Windows builds</span></div></div>
+    <div class="acts">${button('itch-check', i)}${button('itch-build', i)}${button('itch-upload', i, 'risky')}</div>
+  </div>`;
+}
+
+function checklistDetails(g) {
+  const items = g.checklist?.items ?? [];
+  if (!items.length) return `<div class="section"><div class="empty">Run the checklist to see here, item by item, what ${esc(g.name)} has and what it still needs.</div></div>`;
+  const count = (s) => items.filter((it) => s === 'all' || (s === 'todo' ? it.status === 'missing' || it.status === 'check' : it.status === s)).length;
+  const words = search.toLowerCase().split(/\s+/).filter(Boolean);
+  const shown = items.filter((it) =>
+    (filter === 'all' || (filter === 'todo' ? it.status === 'missing' || it.status === 'check' : it.status === filter)) &&
+    words.every((w) => `${it.name} ${it.why} ${it.group} ${it.where.join(' ')}`.toLowerCase().includes(w)));
+  const groups = [...new Set(shown.map((it) => it.group))];
+  const STATUS = { there: 'There', check: 'Check by hand', missing: 'Missing', 'not-needed': 'Not needed' };
+  const PILL = { there: 'ok', check: 'warn', missing: 'bad', 'not-needed': '' };
+  const tabs = [['todo', 'To do'], ['missing', 'Missing'], ['check', 'To check'], ['there', 'There'], ['all', 'All']];
+  return `<div class="section">
+    <div class="section-head"><h3>Checklist details</h3>
+      <div class="seg">${tabs.map(([k, l]) => `<button data-filter="${k}" class="${filter === k ? 'on' : ''}">${l}<span class="n">${count(k)}</span></button>`).join('')}</div>
+      <label class="search">${ICON.search}<input id="search" placeholder="Search the list  ( / )" value="${esc(search)}"></label>
+    </div>
+    ${groups.length ? `<div class="groups">${groups.map((grp) => `<div class="group">
+      <div class="group-name"><span>${esc(grp)}</span><span>${shown.filter((it) => it.group === grp).length}</span></div>
+      ${shown.filter((it) => it.group === grp).map((it) => {
+        const key = `${g.name}|${it.name}`;
+        return `<div class="check ${openChecks.has(key) ? 'open' : ''}">
+          <button data-check="${esc(key)}"><span class="sdot ${it.status}"></span><span class="nm">${esc(it.name)}</span><span class="pill ${PILL[it.status]}">${STATUS[it.status]}</span>${ICON.chev}</button>
+          <div class="more">${esc(it.why)}${it.where.length ? `<div class="files">${it.where.map((f) => `<code class="mono">${esc(f)}</code>`).join('')}</div>` : ''}${it.reason ? `<div>Not needed: ${esc(it.reason)}</div>` : ''}</div>
+        </div>`;
+      }).join('')}</div>`).join('')}</div>`
+      : `<div class="empty">${filter === 'todo' && !search ? 'Nothing left to do on the checklist.' : 'Nothing matches.'}</div>`}
+  </div>`;
+}
+
+function gameView(g, i) {
+  return `<div class="head">
+      <span class="mark big" style="background:${color(g)}">${esc(initials(g.name))}</span>
+      <div><h2>${esc(g.name)}</h2>
+        <div class="meta">${g.version ? `<span class="pill">v${esc(g.version)}</span>` : ''}
+          ${g.lastCommit ? `<span>Last commit ${when(g.lastCommit)}</span>` : ''}
+          ${g.changes ? `<span class="pill warn">${g.changes} uncommitted change${g.changes > 1 ? 's' : ''}</span>` : ''}</div></div>
+      <div class="right">${g.itch ? `<a class="btn" href="${esc(g.itch)}" target="_blank" rel="noopener">${ICON.open}itch.io page</a>` : ''}</div>
+    </div>
+    <div class="tiles">${atlasTile(g, i)}${checklistTile(g, i)}${itchTile(g, i)}</div>
+    ${checklistDetails(g)}`;
+}
+
+function libraryView() {
+  return `<div class="head"><span class="mark big" style="background:var(--accent)">A</span>
+      <div><h2>Asset library</h2><div class="meta"><span>Shared by every game</span></div></div></div>
+    <div class="tiles"><div class="tile" style="grid-column: span 2">
+      <div class="tile-top"><div><h3>Browse the library</h3><div class="what">Art, sounds, fonts and 3D models, with each pack's licence</div></div></div>
+      <div class="facts"><span>Image thumbnails, sounds that play in place, fonts as sample text, 3D models you can turn.</span>
+        <span>Search, filters by type and pack, your own tags, and a “Credit” badge on packs that need one.</span>
+        <span>Opens in a new tab at <span class="mono">localhost:4321</span>.</span></div>
+      <div class="acts">${button('library', 'null', 'main')}</div>
+    </div></div>`;
+}
+
+function render() {
+  document.body.classList.toggle('live', LIVE);
+  renderNav();
+  const games = DATA?.games ?? [];
+  const searchHadFocus = document.activeElement?.id === 'search';
+  const caret = searchHadFocus ? document.activeElement.selectionStart : 0;
+  if (!DATA) $('#view').innerHTML = `<div class="empty" style="text-align:left;max-width:620px">
+      <h3 style="margin:0 0 8px;color:var(--ink)">This is the menu's template, without the games</h3>
+      The games are filled in when the menu is built. Double-click <span class="mono">atelier.cmd</span> in the Atelier folder
+      (or run <span class="mono">node tools/menu/menu.mjs</span>) to open the menu with its games and working buttons,
+      or open <span class="mono">build/menu/index.html</span>, the copy to upload.</div>`;
+  else if (sel === 'library') $('#view').innerHTML = libraryView();
+  else if (!games.length) $('#view').innerHTML = '<div class="empty">No Godot game found next to the Atelier folder.</div>';
+  else $('#view').innerHTML = gameView(games[sel] ?? games[0], games[sel] ? sel : 0);
+  if (searchHadFocus) { const s = $('#search'); s.focus(); s.setSelectionRange(caret, caret); }
+}
+
+// ---------- activity ----------
+
+function runHtml(r) {
+  const secs = Math.round(((r.end || Date.now()) - r.start) / 1000);
+  return `<div class="run ${r.open ? 'open' : ''}" data-run="${r.id}">
+    <div class="run-top"><span class="st ${r.state}">${r.state === 'ok' ? '✓' : r.state === 'bad' ? '!' : ''}</span>
+      <div class="t"><b>${esc(r.title)}</b><span>${esc(r.game)} · ${new Date(r.start).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}${r.end ? ` · ${secs}s` : ' · running'}</span></div>${ICON.chev}</div>
+    <pre class="mono">${esc(r.text) || 'Starting...'}</pre></div>`;
+}
+function renderRuns() {
+  $('#runs').innerHTML = runs.length ? runs.map(runHtml).join('') : '<div class="empty">Nothing run yet. The tools you run show their output here.</div>';
+  renderNav();
+}
+function updateRun(r) {
+  const pre = $(`.run[data-run="${r.id}"] pre`);
+  if (!pre) return renderRuns();
+  const atEnd = pre.scrollTop + pre.clientHeight >= pre.scrollHeight - 20;
+  pre.textContent = r.text;
+  if (atEnd) pre.scrollTop = pre.scrollHeight;
+}
+
+// ---------- palette ----------
+
+let palItems = [], palIndex = 0;
+function palette() {
+  const items = [];
+  (DATA?.games ?? []).forEach((g, i) => {
+    items.push({ ic: '→', text: `Go to ${g.name}`, game: '', fn: () => select(i) });
+    for (const k of ['atlas', 'checklist', 'itch-check', 'itch-build', 'itch-upload']) items.push({ ic: '▸', text: ACTIONS[k].label, game: g.name, fn: () => act(k, i) });
+    if (g.atlasBuilt) items.push({ ic: '↗', text: OPENS.atlas, game: g.name, fn: () => openFile('atlas', i) });
+    if (g.checklist) items.push({ ic: '↗', text: OPENS.checklist, game: g.name, fn: () => openFile('checklist', i) });
+    if (g.itch) items.push({ ic: '↗', text: 'Open the itch.io page', game: g.name, fn: () => window.open(g.itch, '_blank', 'noopener') });
+  });
+  items.push({ ic: '▸', text: ACTIONS.library.label, game: '', fn: () => act('library', null) });
+  items.push({ ic: '≡', text: 'Show activity', game: '', fn: () => document.body.classList.add('show-activity') });
+  return items;
+}
+function renderPal() {
+  const words = $('#pal-input').value.toLowerCase().split(/\s+/).filter(Boolean);
+  const current = sel !== 'library' && DATA.games[sel]?.name;
+  palItems = palette().filter((it) => words.every((w) => `${it.text} ${it.game}`.toLowerCase().includes(w)))
+    .sort((a, b) => (b.game === current) - (a.game === current));
+  palIndex = Math.min(palIndex, Math.max(0, palItems.length - 1));
+  $('#pal-list').innerHTML = palItems.length ? palItems.map((it, i) => `<div class="opt ${i === palIndex ? 'on' : ''}" data-opt="${i}"><span class="ic">${it.ic}</span>${esc(it.text)}<span class="g">${esc(it.game)}</span></div>`).join('')
+    : '<div class="empty" style="border:0">Nothing matches.</div>';
+  $('#pal-list .opt.on')?.scrollIntoView({ block: 'nearest' });
+}
+function openPal() { $('#pal').classList.add('open'); $('#pal-input').value = ''; palIndex = 0; renderPal(); $('#pal-input').focus(); }
+function closePal() { $('#pal').classList.remove('open'); }
+function choosePal(i) { const it = palItems[i]; closePal(); it?.fn(); }
+
+// ---------- dialogs and toasts ----------
+
+let dlgDone = null;
+function ask(title, text, yes, risky) {
+  $('#dlg-box').innerHTML = `<h3>${esc(title)}</h3><p>${esc(text)}</p><div class="row"><button class="btn ghost" data-dlg="no">Cancel</button><button class="btn ${risky ? 'risky' : 'main'}" data-dlg="yes">${esc(yes)}</button></div>`;
+  $('#dlg').classList.add('open');
+  $('[data-dlg="no"]').focus();
+  return new Promise((res) => (dlgDone = res));
+}
+function closeDlg(value) { $('#dlg').classList.remove('open'); dlgDone?.(value); dlgDone = null; }
+
+function showCommand(a, command, g, what) {
+  const text = what
+    ? `This copy of the menu cannot open files on your computer. The ${what === 'atlas' ? 'Atlas' : 'report'} is in the game's folder, at docs/${what === 'atlas' ? 'atlas/index.html' : 'checklist/checklist.md'}.`
+    : 'This copy of the menu cannot run tools. Run this from the Atelier folder, or open the menu with atelier.cmd to use the buttons.';
+  $('#dlg-box').innerHTML = `<h3>${esc(a.label)}${g ? ` · ${esc(g.name)}` : ''}</h3><p>${esc(text)}</p>
+    ${command ? `<div class="cmdline"><code class="mono">${esc(command)}</code><button class="btn main" data-copy="${esc(command)}">Copy</button></div>` : ''}
+    <div class="row"><button class="btn ghost" data-dlg="no">Close</button></div>`;
+  $('#dlg').classList.add('open');
+  ($('[data-copy]', $('#dlg-box')) || $('[data-dlg="no"]')).focus();
+}
+
+function toast(text, action) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = `<span>${esc(text)}</span>${action ? `<button>${esc(action[0])}</button>` : ''}`;
+  if (action) el.querySelector('button').onclick = () => { action[1](); el.remove(); };
+  $('#toasts').append(el);
+  setTimeout(() => el.remove(), 5000);
+}
+
+// ---------- events ----------
+
+document.addEventListener('click', (e) => {
+  const t = e.target;
+  const b = t.closest('button, .opt, .run-top');
+  if (t.classList.contains('veil')) { closePal(); if (t.id === 'dlg') closeDlg(false); return; }
+  if (!b) return;
+  const d = b.dataset;
+  if (d.sel !== undefined) select(d.sel === 'library' ? 'library' : +d.sel);
+  else if (d.act) act(d.act, d.game === 'null' ? null : +d.game);
+  else if (d.open) openFile(d.open, +d.game);
+  else if (d.filter) { filter = d.filter; render(); }
+  else if (d.check) { openChecks.has(d.check) ? openChecks.delete(d.check) : openChecks.add(d.check); b.parentElement.classList.toggle('open'); }
+  else if (d.opt) choosePal(+d.opt);
+  else if (d.dlg) closeDlg(d.dlg === 'yes');
+  else if (d.copy) navigator.clipboard.writeText(d.copy).then(() => { b.textContent = 'Copied'; setTimeout(() => (b.textContent = 'Copy'), 1400); });
+  else if (b.classList.contains('run-top')) { const r = runs.find((x) => x.id === +b.parentElement.dataset.run); r.open = !r.open; b.parentElement.classList.toggle('open'); }
+  else if (b.id === 'open-pal') openPal();
+  else if (b.id === 'open-act') document.body.classList.toggle('show-activity');
+  else if (b.id === 'close-act') document.body.classList.remove('show-activity');
+  else if (b.id === 'clear-act') { runs = runs.filter((r) => r.state === 'going'); renderRuns(); }
+});
+
+document.addEventListener('input', (e) => {
+  if (e.target.id === 'search') { search = e.target.value; render(); }
+  if (e.target.id === 'pal-input') { palIndex = 0; renderPal(); }
+});
+
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); $('#pal').classList.contains('open') ? closePal() : openPal(); return; }
+  if ($('#pal').classList.contains('open')) {
+    if (e.key === 'Escape') closePal();
+    else if (e.key === 'ArrowDown') { e.preventDefault(); palIndex = Math.min(palItems.length - 1, palIndex + 1); renderPal(); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); palIndex = Math.max(0, palIndex - 1); renderPal(); }
+    else if (e.key === 'Enter') { e.preventDefault(); choosePal(palIndex); }
+    return;
+  }
+  if ($('#dlg').classList.contains('open')) { if (e.key === 'Escape') closeDlg(false); return; }
+  if (e.target.matches?.("input")) { if (e.key === 'Escape') e.target.blur(); return; }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const games = DATA?.games ?? [];
+  if (/^[1-9]$/.test(e.key) && +e.key <= games.length) select(+e.key - 1);
+  else if (e.key.toLowerCase() === 'l') select('library');
+  else if (e.key === '/' && $('#search')) { e.preventDefault(); $('#search').focus(); }
+  else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    const order = [...games.keys(), 'library'], at = order.indexOf(sel);
+    const next = order[(at + (e.key === 'ArrowDown' ? 1 : order.length - 1)) % order.length];
+    e.preventDefault(); select(next);
+  } else if (e.key === 'Escape') document.body.classList.remove('show-activity');
+});
+
+// start on the game named in the address (#pierresavant), if any
+const wanted = decodeURIComponent(location.hash.slice(1));
+if (wanted === 'library') sel = 'library';
+else { const i = (DATA?.games ?? []).findIndex((g) => slug(g.name) === wanted); if (i >= 0) sel = i; }
+render(); renderRuns();
+if (LIVE) window.addEventListener('focus', () => { if (!busy) refresh(); });
+</script>
+</body>
+</html>

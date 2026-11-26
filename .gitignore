@@ -5,3 +5,6 @@ library/**
 !library/README.md
 !library/sources.md
 !library/*/.gitkeep
+
+# Built pages (the main menu copy to upload)
+build/

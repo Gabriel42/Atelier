@@ -1,223 +1,249 @@
 #!/usr/bin/env node
-// Atelier main menu: one place to run every Atelier tool on a game.
+// Atelier main menu: one page to run every Atelier tool on a game.
 //
-//   node menu.mjs                     pick a game among the folders next to Atelier
-//   node menu.mjs <project folder>    start on that game
+//   node menu.mjs                    build the page, open it in the browser with working buttons
+//   node menu.mjs --build            build the page only (build/menu/index.html, ready to upload)
+//   node menu.mjs <game folder>...   use these games instead of the ones next to Atelier
+//   node menu.mjs --port 4310        use another port
 //
-// Arrow keys (or the number) to choose, Enter to run, Esc to go back, Q to quit.
-// It writes nothing itself: each tool writes inside the game, as usual.
+// The page lists the Godot games in the folder that holds Atelier. Opened through this
+// script (http://localhost:4310), its buttons run the tools and show their output. Opened
+// any other way (as a file, or uploaded), it shows the commands to copy instead.
+// The page holds no paths of this computer, only game names, versions and itch.io pages.
 // No dependencies; needs Node 18+.
 
 import fs from 'node:fs';
+import http from 'node:http';
 import path from 'node:path';
-import readline from 'node:readline';
-import { spawn } from 'node:child_process';
+import { execFile, spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
-const atelier = path.resolve(here, '..', '..');
-const tool = (name) => path.join(atelier, 'tools', name, `${name}.mjs`);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
+const ATELIER = path.resolve(HERE, '..', '..');
+const OUT = path.join(ATELIER, 'build', 'menu', 'index.html');
+const tool = (name) => path.join(ATELIER, 'tools', name, `${name}.mjs`);
 
-const BACK = Symbol('back');
-const QUIT = Symbol('quit');
-const tty = process.stdin.isTTY && process.stdout.isTTY;
-const bold = (s) => (tty ? `\x1b[1m${s}\x1b[0m` : s);
-const dim = (s) => (tty ? `\x1b[2m${s}\x1b[0m` : s);
-const cyan = (s) => (tty ? `\x1b[36m${s}\x1b[0m` : s);
+// ---------- Reading the games ----------
 
-// ---------- Small helpers ----------
-
-/** The Godot projects in the folder that holds Atelier (Pierresavant, Love Will Find...). */
-function findGames() {
-  const parent = path.dirname(atelier);
-  let names = [];
-  try { names = fs.readdirSync(parent, { withFileTypes: true }); } catch { return []; }
-  return names
+function findGames(folders) {
+  if (folders.length) return folders.map((f) => path.resolve(f));
+  const parent = path.dirname(ATELIER);
+  return fs.readdirSync(parent, { withFileTypes: true })
     .filter((d) => d.isDirectory() && fs.existsSync(path.join(parent, d.name, 'project.godot')))
     .map((d) => path.join(parent, d.name));
 }
 
-/** The game's name from project.godot, or its folder name. */
-function gameName(root) {
-  try {
-    const text = fs.readFileSync(path.join(root, 'project.godot'), 'utf8');
-    const m = /^config\/name="(.*)"/m.exec(text);
-    if (m) return m[1];
-  } catch { /* fall through */ }
-  return path.basename(root);
-}
+const read = (file) => { try { return fs.readFileSync(file, 'utf8'); } catch { return null; } };
+const mtime = (file) => { try { return fs.statSync(file).mtime.toISOString(); } catch { return null; } };
 
-/** Runs a tool in this window. Ctrl+C stops the tool and comes back to the menu. */
-function run(script, args) {
+/** Runs a command and gives back what it printed (empty if it failed). */
+function output(cmd, args) {
   return new Promise((resolve) => {
-    console.log(dim(`\n> node ${path.relative(atelier, script)} ${args.map((a) => (/\s/.test(a) ? `"${a}"` : a)).join(' ')}\n`));
-    const child = spawn(process.execPath, [script, ...args], { stdio: 'inherit' });
-    const ignore = () => {};
-    process.on('SIGINT', ignore);
-    child.on('close', (code) => { process.off('SIGINT', ignore); resolve(code ?? 1); });
-    child.on('error', (err) => { process.off('SIGINT', ignore); console.log(err.message); resolve(1); });
+    execFile(cmd, args, { cwd: ATELIER, timeout: 30000, windowsHide: true }, (err, stdout) => resolve(err ? '' : stdout));
   });
 }
 
-/** Opens a file or web page with the computer's default app. */
+/** The checklist report's items, read back from its tables. */
+function checklistItems(report) {
+  const STATUS = { 'There': 'there', 'Check': 'check', 'Missing': 'missing', 'Not needed': 'not-needed' };
+  const items = [];
+  let group = '';
+  for (const line of report.split('\n')) {
+    const h = /^## (.+)/.exec(line);
+    if (h) { group = h[1].trim(); continue; }
+    const cells = line.split('|').slice(1, -1).map((c) => c.trim());
+    if (cells.length !== 4 || !STATUS[cells[1]]) continue;
+    const status = STATUS[cells[1]];
+    const where = status === 'not-needed' ? [] : [...cells[2].matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+    items.push({ group, name: cells[0], status, where, why: cells[3], reason: status === 'not-needed' ? cells[2] : '' });
+  }
+  return items;
+}
+
+/** What the page shows about one game: no paths of this computer, only what is safe to upload. */
+async function describe(root) {
+  const project = read(path.join(root, 'project.godot')) || '';
+  const field = (key) => new RegExp(`^config/${key}="(.*)"`, 'm').exec(project)?.[1] || '';
+
+  let itch = null;
+  try {
+    const page = JSON.parse(read(path.join(root, 'itch.json')) || '{}').page || '';
+    const m = /^([\w-]+)\/([\w-]+)$/.exec(page);
+    itch = m ? `https://${m[1]}.itch.io/${m[2]}` : /^https:\/\//.test(page) ? page : null;
+  } catch { /* no page */ }
+
+  let checklist = null;
+  const report = read(path.join(root, 'docs', 'checklist', 'checklist.md'));
+  const counts = report && /\*\*(\d+) there · (\d+) to check · (\d+) missing · (\d+) marked not needed\*\*/.exec(report);
+  if (counts) {
+    const [there, check, missing, notNeeded] = counts.slice(1).map(Number);
+    const date = mtime(path.join(root, 'docs', 'checklist', 'checklist.md'));
+    checklist = { there, check, missing, notNeeded, date, items: checklistItems(report) };
+  }
+
+  // How many functions the Atlas explains (read from the code, so it works before a build too).
+  const [stats, log, changes] = await Promise.all([
+    output(process.execPath, [tool('atlas'), root, '--stats']),
+    output('git', ['-C', root, 'log', '-1', '--format=%cI']),
+    output('git', ['-C', root, 'status', '--porcelain']),
+  ]);
+  const s = /(\d+) scripts;.*?(\d+) up to date, (\d+) outdated, (\d+) missing/.exec(stats);
+  const atlas = s ? { scripts: +s[1], ok: +s[2], stale: +s[3], missing: +s[4] } : null;
+
+  return {
+    name: field('name') || path.basename(root),
+    folder: path.basename(root),
+    version: field('version'),
+    itch,
+    atlas,
+    atlasBuilt: mtime(path.join(root, 'docs', 'atlas', 'index.html')),
+    checklist,
+    lastCommit: log.trim() || null,
+    changes: changes.split('\n').filter(Boolean).length,
+  };
+}
+
+async function state(games, port) {
+  return { built: new Date().toISOString(), port, games: await Promise.all(games.map(describe)) };
+}
+
+function page(data) {
+  return fs.readFileSync(path.join(HERE, 'page.html'), 'utf8')
+    .replace('/*__ATELIER_DATA__*/null', () => JSON.stringify(data).replace(/</g, '\\u003c'));
+}
+
+async function build(games, port) {
+  fs.mkdirSync(path.dirname(OUT), { recursive: true });
+  fs.writeFileSync(OUT, page(await state(games, port)));
+  return OUT;
+}
+
+// ---------- Running the tools for the page ----------
+
 function open(target) {
   const [cmd, args] = process.platform === 'win32' ? ['cmd', ['/c', 'start', '', target]]
     : process.platform === 'darwin' ? ['open', [target]] : ['xdg-open', [target]];
   spawn(cmd, args, { stdio: 'ignore', detached: true }).unref();
 }
 
-function ask(question) {
-  return new Promise((resolve) => {
-    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-    rl.question(question, (answer) => { rl.close(); resolve(answer.trim()); });
-  });
+/** The command behind each button. Only these can run: the page sends a name, never a command. */
+function command(action, root) {
+  switch (action) {
+    case 'atlas': return [tool('atlas'), root];
+    case 'checklist': return [tool('checklist'), root];
+    case 'itch-check': return [tool('itch'), root, '--check'];
+    case 'itch-build': return [tool('itch'), root, '--dry-run'];
+    case 'itch-upload': return [tool('itch'), root];
+    default: return null;
+  }
 }
 
-const pause = () => ask(dim('\nPress Enter to go back to the menu.'));
+let library = null;   // the library's own server, started once
 
-// ---------- The menu itself ----------
+function serve(games, port) {
+  let running = null;
 
-/**
- * Shows a list and returns the chosen item's value, BACK (Esc) or QUIT (Q).
- * items: [{ label, hint?, value }]
- */
-async function choose(title, items, { canGoBack = true } = {}) {
-  if (!tty) {
-    console.log(`\n${title}`);
-    items.forEach((it, i) => console.log(`  ${i + 1}. ${it.label}${it.hint ? `  - ${it.hint}` : ''}`));
-    const answer = (await ask(`Number${canGoBack ? ', B to go back' : ''}, Q to quit: `)).toLowerCase();
-    if (answer === 'q' || answer === '') return QUIT;
-    if (answer === 'b' && canGoBack) return BACK;
-    const n = Number(answer);
-    return n >= 1 && n <= items.length ? items[n - 1].value : choose(title, items, { canGoBack });
-  }
+  const server = http.createServer(async (req, res) => {
+    // Only this computer's browser, on this page: no other site can make it run anything.
+    if (!new RegExp(`^(localhost|127\\.0\\.0\\.1):${port}$`).test(req.headers.host || '')) { res.writeHead(403); return res.end(); }
+    const url = new URL(req.url, `http://localhost:${port}`);
 
-  let index = 0;
-  const draw = () => {
-    console.clear();
-    console.log(bold('  Atelier') + dim('  Gabriel\'s gamedev workshop\n'));
-    console.log(`  ${title}\n`);
-    items.forEach((it, i) => {
-      const line = `${i + 1}. ${it.label}`;
-      const hint = it.hint ? dim(`  ${it.hint}`) : '';
-      console.log(i === index ? cyan(`> ${bold(line)}`) + hint : `  ${line}${hint}`);
+    if (req.method === 'GET' && url.pathname === '/') {
+      res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+      return res.end(page(await state(games, port)));
+    }
+    if (req.method === 'GET' && url.pathname === '/api/state') {
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      return res.end(JSON.stringify(await state(games, port)));
+    }
+    if (req.method !== 'POST' || req.headers['x-atelier'] !== '1') { res.writeHead(404); return res.end(); }
+
+    let body = '';
+    req.on('data', (c) => { body += c; if (body.length > 10000) req.destroy(); });
+    req.on('end', () => {
+      let msg = {};
+      try { msg = JSON.parse(body); } catch { /* empty */ }
+      const root = Number.isInteger(msg.game) ? games[msg.game] : null;
+
+      if (url.pathname === '/api/open') {
+        const file = msg.what === 'atlas' ? ['docs', 'atlas', 'index.html'] : msg.what === 'checklist' ? ['docs', 'checklist', 'checklist.md'] : null;
+        if (root && file && fs.existsSync(path.join(root, ...file))) open(path.join(root, ...file));
+        res.writeHead(204); return res.end();
+      }
+      if (url.pathname !== '/api/run') { res.writeHead(404); return res.end(); }
+
+      res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+
+      if (msg.action === 'library') {
+        if (library && library.exitCode === null) {
+          open('http://localhost:4321/');
+          return res.end('The library is already open at http://localhost:4321/\n\n[exit 0]\n');
+        }
+        library = spawn(process.execPath, [tool('library'), path.join(ATELIER, 'library')], { cwd: ATELIER });
+        let said = '';
+        const onOut = (c) => {
+          said += c;
+          res.write(c);
+          if (/Library open at/.test(said)) { library.stdout.off('data', onOut); res.end('\n[exit 0]\n'); }
+        };
+        library.stdout.on('data', onOut);
+        library.stderr.on('data', (c) => res.writableEnded || res.write(c));
+        library.on('close', (code) => res.writableEnded || res.end(`\n[exit ${code ?? 1}]\n`));
+        return;
+      }
+
+      const args = root && command(msg.action, root);
+      if (!args) return res.end('Unknown game or action.\n[exit 1]\n');
+      if (running) return res.end('Another tool is still running; wait for it to finish.\n[exit 1]\n');
+
+      console.log(`Running ${msg.action} on ${path.basename(root)}...`);
+      running = spawn(process.execPath, args, { cwd: ATELIER, env: { ...process.env, NO_COLOR: '1' } });
+      running.stdout.on('data', (c) => res.write(c));
+      running.stderr.on('data', (c) => res.write(c));
+      running.on('error', (e) => res.write(`${e.message}\n`));
+      running.on('close', (code) => { running = null; res.end(`\n[exit ${code ?? 1}]\n`); });
     });
-    console.log(dim(`\n  Up/Down and Enter to choose${canGoBack ? ', Esc to go back' : ''}, Q to quit`));
-  };
+  });
 
-  return new Promise((resolve) => {
-    readline.emitKeypressEvents(process.stdin);
-    process.stdin.setRawMode(true);
-    process.stdin.resume();
-    const done = (value) => {
-      process.stdin.off('keypress', onKey);
-      process.stdin.setRawMode(false);
-      process.stdin.pause();
-      resolve(value);
-    };
-    const onKey = (str, key = {}) => {
-      if (key.ctrl && key.name === 'c') return done(QUIT);
-      if (key.name === 'up') index = (index + items.length - 1) % items.length;
-      else if (key.name === 'down') index = (index + 1) % items.length;
-      else if (key.name === 'return') return done(items[index].value);
-      else if (key.name === 'escape' || key.name === 'backspace') { if (canGoBack) return done(BACK); }
-      else if (str && str.toLowerCase() === 'q') return done(QUIT);
-      else if (str && /^[1-9]$/.test(str) && +str <= items.length) return done(items[+str - 1].value);
-      draw();
-    };
-    process.stdin.on('keypress', onKey);
-    draw();
+  server.on('error', async (err) => {
+    if (err.code !== 'EADDRINUSE') {
+      console.log(`Could not start the menu: ${err.message}`);
+      process.exit(1);
+    }
+    // The port is taken: by the menu itself (open it again) or by something else (try the next one).
+    const url = `http://localhost:${port}/`;
+    const isMenu = await fetch(`${url}api/state`).then((r) => r.json()).then((d) => Array.isArray(d.games)).catch(() => false);
+    if (isMenu) {
+      console.log(`The menu is already open at ${url} (opening it again).`);
+      if (!flags.has('--no-open')) open(url);
+      process.exit(0);
+    }
+    if (port - firstPort >= 10) { console.log(`Could not find a free port from ${firstPort} to ${port}.`); process.exit(1); }
+    serve(games, port + 1);
+  });
+  server.listen(port, '127.0.0.1', () => {
+    const url = `http://localhost:${port}/`;
+    console.log(`Atelier menu open at ${url}  (only on this computer; press Ctrl+C to stop)`);
+    if (!flags.has('--no-open')) open(url);
   });
 }
 
-// ---------- What each entry does ----------
+// ---------- Start ----------
 
-async function codeAtlas(root) {
-  const code = await run(tool('atlas'), [root]);
-  const page = path.join(root, 'docs', 'atlas', 'index.html');
-  if (code === 0 && fs.existsSync(page)) {
-    open(page);
-    console.log('\nOpened in the browser. To write the missing explanations, type /atlas in a Claude session inside the game.');
-  }
-  await pause();
+const args = process.argv.slice(2);
+const flags = new Set(args.filter((a) => a.startsWith('--')));
+const portAt = args.indexOf('--port');
+const port = portAt >= 0 ? Number(args[portAt + 1]) || 4310 : 4310;
+const firstPort = port;
+const folders = args.filter((a, i) => !a.startsWith('--') && !(portAt >= 0 && i === portAt + 1));
+
+const games = findGames(folders);
+const missing = games.find((g) => !fs.existsSync(path.join(g, 'project.godot')));
+if (missing) {
+  console.log(`No Godot game found at ${missing} (it has no project.godot).`);
+  process.exit(1);
 }
 
-async function checklist(root) {
-  const code = await run(tool('checklist'), [root]);
-  const report = path.join(root, 'docs', 'checklist', 'checklist.md');
-  if (code === 0 && fs.existsSync(report)) {
-    const answer = await ask('\nOpen the report? (Y/n) ');
-    if (!/^n/i.test(answer)) open(report);
-  } else await pause();
-}
-
-async function itch(root, name) {
-  for (;;) {
-    const choice = await choose(`${name} on itch.io`, [
-      { label: 'What is ready', hint: 'checks Godot, butler, presets and the page; changes nothing', value: 'check' },
-      { label: 'Build only', hint: 'builds into build/itch/, uploads nothing', value: 'build' },
-      { label: 'Build and upload', hint: 'puts the new version on the game\'s itch.io page', value: 'upload' },
-    ]);
-    if (choice === BACK) return;
-    if (choice === QUIT) return QUIT;
-    if (choice === 'check') await run(tool('itch'), [root, '--check']);
-    if (choice === 'build') await run(tool('itch'), [root, '--dry-run']);
-    if (choice === 'upload') {
-      const answer = await ask(`\nUpload ${name} to itch.io now? Players will see the new version. (y/N) `);
-      if (!/^y/i.test(answer)) continue;
-      await run(tool('itch'), [root]);
-    }
-    await pause();
-  }
-}
-
-async function library() {
-  console.log(dim('\nThe library opens in the browser. Press Ctrl+C here when you are done to come back to the menu.'));
-  await run(tool('library'), [path.join(atelier, 'library')]);
-}
-
-async function gameMenu(root) {
-  const name = gameName(root);
-  for (;;) {
-    const choice = await choose(bold(name) + dim(`  ${root}`), [
-      { label: 'Code Atlas', hint: 'map of the code, every function explained', value: 'atlas' },
-      { label: 'Essentials checklist', hint: 'what the game has and what it still needs', value: 'checklist' },
-      { label: 'itch.io', hint: 'build the game and upload it', value: 'itch' },
-      { label: 'Asset library', hint: 'browse the art, sounds, fonts and 3D models', value: 'library' },
-    ]);
-    if (choice === BACK || choice === QUIT) return choice;
-    if (choice === 'atlas') await codeAtlas(root);
-    if (choice === 'checklist') await checklist(root);
-    if (choice === 'library') await library();
-    if (choice === 'itch' && (await itch(root, name)) === QUIT) return QUIT;
-  }
-}
-
-async function main() {
-  const arg = process.argv[2];
-  if (arg) {
-    const root = path.resolve(arg);
-    if (!fs.existsSync(path.join(root, 'project.godot'))) {
-      console.log(`No Godot game found at ${root} (it has no project.godot).`);
-      return 1;
-    }
-    await gameMenu(root);
-    return 0;
-  }
-
-  for (;;) {
-    const games = findGames();
-    const items = [
-      ...games.map((root) => ({ label: gameName(root), value: root })),
-      { label: 'Asset library', hint: 'for every game', value: 'library' },
-    ];
-    const choice = await choose(games.length ? 'Which game?' : `No Godot game found next to Atelier (in ${path.dirname(atelier)}).`,
-      items, { canGoBack: false });
-    if (choice === QUIT || choice === BACK) return 0;
-    if (choice === 'library') { await library(); continue; }
-    if ((await gameMenu(choice)) === QUIT) return 0;
-  }
-}
-
-process.exitCode = await main();
-if (tty) console.log('\nSee you soon.');
+const file = await build(games, port);
+console.log(`Menu page built: ${path.relative(ATELIER, file)}  (${games.length} games; this file is the one to upload)`);
+if (!flags.has('--build')) serve(games, port);

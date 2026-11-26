@@ -8,7 +8,7 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 
 | Folder | What it is |
 |---|---|
-| `atelier.cmd`, `tools/menu/` | **Main menu**: one place to run every tool below on a game |
+| `atelier.cmd`, `tools/menu/` | **Main menu**: one page for every game, with buttons that run the tools below; also builds a copy to upload |
 | `tools/atlas/` | **Code Atlas**: turns a Godot project's code into one browsable page (map of the folders, every script and function explained, who calls whom, signals) |
 | `tools/checklist/` | **Game essentials checklist**: the systems almost every game needs (title menu, save, options, language, debug panel, and so on) and whether a project has each one |
 | `tools/library/` | **Library visualizer**: a page to browse the asset library: image thumbnails, sounds that play in place, fonts as sample text, 3D models you can turn, with search, filters and each pack's licence |
@@ -21,15 +21,32 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 Needs Node 18+. Double-click `atelier.cmd`, or from the Atelier folder:
 
 ```
-node tools/menu/menu.mjs                    # pick a game, then a tool
-node tools/menu/menu.mjs <project folder>   # start on that game
+node tools/menu/menu.mjs                      # build the page and open it with working buttons
+node tools/menu/menu.mjs --build              # build the page only, to upload it
+node tools/menu/menu.mjs <game folder>...     # these games instead of the ones next to Atelier
 ```
 
-It lists the Godot games in the folder that holds Atelier (Pierresavant, Love Will Find,
-Philosopher's Paradise...). Pick one, then: Code Atlas (builds it and opens it), Essentials
-checklist (runs it and offers to open the report), itch.io (what is ready, build only, or
-build and upload, which asks first) or Asset library. Up/Down and Enter to choose (or the
-number), Esc to go back, Q to quit. Ctrl+C stops a running tool and comes back to the menu.
+The games in the folder that holds Atelier (Pierresavant, Love Will Find, Philosopher's
+Paradise...) are listed on the left. Each game's page shows its version, last commit and
+uncommitted changes, and three tiles:
+- **Code Atlas**: how many functions are explained, outdated or missing; Build, Open.
+- **Essentials checklist**: the score (there, to check, missing); Run, Open.
+- **itch.io**: the page and version; What is ready, Build only, Upload (asks first).
+
+Below them, the checklist item by item: filter by To do, Missing, To check, There or All,
+search it, and click an item to see why it matters and where it was found.
+
+While a tool runs, its output streams into the Activity panel on the right, and every run
+stays listed there. It opens at http://localhost:4310 (only on this computer; Ctrl+C in
+the window stops it).
+
+Keys: `1`-`9` pick a game, `L` the asset library, Up/Down go through the list, `/`
+searches the checklist, `Ctrl+K` searches every action (run, open, go to), `Esc` closes.
+
+The page is also written to `build/menu/index.html` (git ignores it), ready to upload.
+That copy works the same for reading (games, scores, checklist details, search), but its
+buttons cannot run anything: they show the command to copy instead. It holds no paths of
+this computer, only game names, versions, dates, itch.io pages and the checklist report.
 
 ## Library visualizer
 

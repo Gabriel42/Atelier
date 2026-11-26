@@ -12,6 +12,7 @@ pieces shared by his games. See `README.md` for what each tool does.
 | `friction.md` | Gabriel's log of what slowed him down on a game; the source of new tools |
 
 ## Workflow
+- Always talk to Gabriel in English here, even when he writes in French.
 - Start working right away on what Gabriel asks; ask only when his input is needed.
 - A tool is done when it has been run on a real project (Pierresavant at
   `../Pierresavant`, Love Will Find at `../Love Will Find`) and its result checked.
@@ -26,8 +27,9 @@ pieces shared by his games. See `README.md` for what each tool does.
   to `C:\Users\gabri\.claude\skills\<name>\SKILL.md`.
 
 ## Layout
-- `tools/menu/menu.mjs` – the main menu (pick a game, run a tool on it); `atelier.cmd`
-  starts it with a double-click
+- `tools/menu/menu.mjs` – the main menu: fills `tools/menu/page.html` with the games,
+  writes `build/menu/index.html` (to upload) and serves it on localhost:4310, where its
+  buttons run the tools; `atelier.cmd` starts it with a double-click
 - `tools/atlas/atlas.mjs` – the Code Atlas generator (parses GDScript, links calls and
   signals, merges explanations); `tools/atlas/page.html` – the page it fills in (one
   self-contained file: styles, script, data)
