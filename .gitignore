@@ -1,0 +1,7 @@
+# Asset library: the framework (notes, folder layout, tools) goes to GitHub,
+# the assets themselves never do (several pack licences forbid sharing the files).
+library/**
+!library/**/
+!library/README.md
+!library/sources.md
+!library/*/.gitkeep

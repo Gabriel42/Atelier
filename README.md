@@ -12,7 +12,7 @@ Nothing here is a game. A tool earns its place when it has been useful on two pr
 | `tools/checklist/` | **Game essentials checklist**: the systems almost every game needs (title menu, save, options, language, debug panel, and so on) and whether a project has each one |
 | `tools/itch/` | **itch.io exporter**: builds a game and uploads it to its itch.io page in one command |
 | `skills/` | Claude skills that drive the tools (`/atlas`, `/checklist`, `/itch`); the source of truth, copied to `~/.claude/skills/` |
-| `library/` | **Asset library**: art, sound, fonts and 3D files, sorted by type, each with its license. `library/sources.md` lists the free repositories to get more |
+| `library/` | **Asset library**: art, sound, fonts and 3D files, sorted by type, each with its license, plus whole packs in `library/packs/`. Only its notes and folder layout go to GitHub; git ignores the assets. `library/sources.md` lists the free repositories to get more |
 
 ## itch.io exporter
 
