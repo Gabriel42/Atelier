@@ -25,7 +25,6 @@
     - [ ] Humble Weekly Bundle: RPG Maker (its packs may be allowed in RPG Maker only)
 
 ## Next
-- **Library visualizer**: a page to browse `library/`: image thumbnails in a grid, sounds you can play in place, fonts shown as sample text, 3D models as a preview, with search and a filter by pack and type. Each asset shows its pack's licence (and a "credit needed" badge). The tool is tracked in git, but the page it builds stays inside `library/` (ignored), because it shows the assets.
 - **`/release`**: one command for a game: run all tests, bump the version, draft patch notes from `done.md`, then call the itch.io exporter (`tools/itch/`).
 - **Content and balance dashboard**: a page that reads a game's `.tres` files and CSVs: recipe graph, unlock chain, items nothing drops or uses, a pacing simulation.
 - **Screenshot gallery**: keep each commit's screenshots and show before/after with a slider.

@@ -1,0 +1,869 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asset library</title>
+<style>
+:root {
+  --bg: #f5f3ee; --panel: #fffdf9; --ink: #26231f; --muted: #6f6a61; --line: #ddd7cb;
+  --accent: #9a5a14; --accent-soft: #f3e6d2; --card: #fffdf9; --well: #ebe7de;
+  --credit: #a8590f; --credit-soft: #fbe9d3; --check: #b3261e; --check-soft: #f8dcd8; --free: #3f6b52; --free-soft: #dcebe1;
+  --chk-a: #e9e5dc; --chk-b: #f7f5f0;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1a18; --panel: #232220; --ink: #e9e5dd; --muted: #a09a8f; --line: #3a3833;
+    --accent: #e2a85c; --accent-soft: #3a2f1f; --card: #252321; --well: #1f1e1c;
+    --credit: #f0a860; --credit-soft: #3d2b17; --check: #f08a80; --check-soft: #3f1f1c; --free: #8fc2a3; --free-soft: #1f3327;
+    --chk-a: #2c2a27; --chk-b: #353330;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 "Segoe UI", system-ui, sans-serif; display: flex; overflow: hidden; }
+button, input, select { font: inherit; color: inherit; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+.mono { font-family: "Cascadia Code", Consolas, monospace; font-size: 12px; }
+
+/* side: packs and folders */
+#side { width: 260px; flex: none; height: 100vh; overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); padding: 14px 10px 40px; }
+#side h1 { font-size: 17px; margin: 0 4px 2px; }
+#side .sub { color: var(--muted); font-size: 12px; margin: 0 4px 12px; }
+.label { margin: 16px 4px 4px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.nav button { display: flex; width: 100%; align-items: center; gap: 6px; padding: 3px 8px; border: 0; border-radius: 5px; background: none; text-align: left; cursor: pointer; }
+.nav button:hover { background: var(--accent-soft); }
+.nav button.on { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+.nav .n { margin-left: auto; color: var(--muted); font-size: 12px; font-weight: 400; }
+.nav .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex: none; background: var(--free); }
+.dot.credit { background: var(--credit); } .dot.check, .dot.none { background: var(--check); } .dot.own { background: var(--muted); }
+#crumbs { margin: 4px 4px 6px; font-size: 12px; color: var(--muted); word-break: break-word; }
+#crumbs a { cursor: pointer; }
+.legend { margin: 18px 4px 0; font-size: 12px; color: var(--muted); display: grid; gap: 3px; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+
+/* top bar */
+#main { flex: 1; display: flex; flex-direction: column; min-width: 0; height: 100vh; }
+#bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+#search { flex: 1 1 260px; max-width: 420px; padding: 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+#search:focus, #sample:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.chips { display: flex; gap: 4px; flex-wrap: wrap; }
+.chip { padding: 4px 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); cursor: pointer; white-space: nowrap; }
+.chip:hover { border-color: var(--accent); }
+.chip.on { background: var(--accent); border-color: var(--accent); color: var(--panel); }
+.chip .n { opacity: .7; font-size: 12px; }
+#sample { width: 210px; padding: 5px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+#bgs { display: flex; gap: 3px; align-items: center; color: var(--muted); font-size: 12px; }
+#bgs button { width: 20px; height: 20px; border-radius: 4px; border: 1px solid var(--line); cursor: pointer; padding: 0; }
+#bgs button.on { outline: 2px solid var(--accent); outline-offset: 1px; }
+#count { color: var(--muted); font-size: 12px; margin-left: auto; }
+
+/* grid */
+#scroll { flex: 1; overflow-y: auto; padding: 14px 16px 60px; }
+#grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; }
+.card { position: relative; background: var(--card); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; cursor: pointer; display: flex; flex-direction: column; }
+.card:hover { border-color: var(--accent); }
+.card.sel { outline: 2px solid var(--accent); outline-offset: -1px; }
+.thumb { height: 120px; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.thumb img { max-width: 112px; max-height: 112px; object-fit: contain; }
+.thumb img.px, .big img.px { image-rendering: pixelated; max-width: none; max-height: none; }
+.meta { padding: 5px 8px 6px; border-top: 1px solid var(--line); min-width: 0; }
+.meta .nm { font-size: 12px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta .sm { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.badge { position: absolute; z-index: 1; top: 5px; right: 5px; font-size: 10px; font-weight: 600; padding: 0 6px; border-radius: 999px; line-height: 17px; }
+.badge.credit { background: var(--credit-soft); color: var(--credit); }
+.badge.check, .badge.none { background: var(--check-soft); color: var(--check); }
+.bg-checker .thumb, .bg-checker .big { background: repeating-conic-gradient(var(--chk-a) 0 25%, var(--chk-b) 0 50%) 0 0 / 16px 16px; }
+.bg-light .thumb, .bg-light .big { background: #f4f2ed; }
+.bg-dark .thumb, .bg-dark .big { background: #2a2826; }
+.bg-green .thumb, .bg-green .big { background: #5d8a5e; }
+.card.sound .thumb, .card.font .thumb { background: var(--well) !important; }
+.card.model .thumb { background: var(--well) !important; }
+.card.font { grid-column: span 2; }
+.card.font .thumb { padding: 8px 12px; justify-content: flex-start; font-size: 26px; line-height: 1.2; white-space: nowrap; }
+.play { width: 46px; height: 46px; border-radius: 50%; border: 0; background: var(--accent); color: var(--panel); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+.play svg { width: 18px; height: 18px; fill: currentColor; }
+.prog { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--accent); width: 0; }
+.card.sound .thumb { position: relative; flex-direction: column; gap: 4px; }
+.dur { font-size: 11px; color: var(--muted); height: 14px; }
+.nopv { color: var(--muted); font-size: 11px; text-align: center; padding: 0 8px; }
+#more { height: 40px; }
+#empty { color: var(--muted); padding: 40px; text-align: center; display: none; }
+
+/* detail */
+#detail { width: 400px; flex: none; height: 100vh; overflow-y: auto; border-left: 1px solid var(--line); background: var(--panel); display: none; }
+#detail.open { display: block; }
+#detail .head { display: flex; align-items: center; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--panel); z-index: 1; }
+#detail .head h2 { font-size: 15px; margin: 0; flex: 1; overflow-wrap: anywhere; }
+.ibtn { border: 1px solid var(--line); background: var(--bg); border-radius: 6px; padding: 2px 8px; cursor: pointer; }
+.ibtn:hover { border-color: var(--accent); }
+.big { min-height: 220px; display: flex; align-items: center; justify-content: center; overflow: auto; padding: 12px; border-bottom: 1px solid var(--line); }
+.big img { max-width: 376px; max-height: 420px; }
+.big canvas { width: 376px; height: 320px; cursor: grab; touch-action: none; }
+.big audio { width: 100%; }
+.fontshow { width: 100%; overflow-wrap: anywhere; }
+.fontshow div { margin: 4px 0; line-height: 1.2; }
+.sect { padding: 10px 14px; border-bottom: 1px solid var(--line); }
+.sect h3 { margin: 0 0 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.kv { display: grid; grid-template-columns: 80px 1fr; gap: 3px 8px; font-size: 13px; }
+.kv > :nth-child(odd) { color: var(--muted); }
+.kv > * { min-width: 0; overflow-wrap: anywhere; }
+.lic { border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+.lic.free { background: var(--free-soft); } .lic.credit { background: var(--credit-soft); } .lic.check, .lic.none { background: var(--check-soft); } .lic.own { background: var(--well); }
+.lic b { display: block; margin-bottom: 2px; }
+.lic .credit-b { color: var(--credit); } .lic .check-b, .lic .none-b { color: var(--check); } .lic .free-b { color: var(--free); }
+.lic p { margin: 4px 0; }
+.copyline { display: flex; gap: 6px; align-items: flex-start; margin-top: 6px; }
+.copyline code { flex: 1; background: var(--bg); border-radius: 5px; padding: 3px 6px; overflow-wrap: anywhere; }
+.fmts { display: flex; flex-wrap: wrap; gap: 4px; }
+.fmts a { border: 1px solid var(--line); border-radius: 5px; padding: 0 6px; font-size: 12px; }
+.hint { color: var(--muted); font-size: 12px; padding: 8px 14px; }
+/* tags */
+.tagrow { display: flex; gap: 3px; margin-top: 3px; overflow: hidden; height: 16px; }
+.tg { font-size: 10px; line-height: 16px; padding: 0 6px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.card.picked { outline: 3px solid var(--accent); outline-offset: -2px; }
+.card.picked::after { content: "✓"; position: absolute; top: 5px; left: 5px; width: 20px; height: 20px; border-radius: 50%; background: var(--accent); color: var(--panel); font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.tagedit { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.tagedit .tg { font-size: 12px; line-height: 22px; padding: 0 4px 0 9px; display: inline-flex; align-items: center; gap: 2px; }
+.tagedit .tg button { border: 0; background: none; color: inherit; cursor: pointer; padding: 0 4px; font-size: 13px; line-height: 1; opacity: .7; }
+.tagedit .tg button:hover { opacity: 1; }
+.taginput { flex: 1 1 120px; min-width: 110px; padding: 3px 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.taginput:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+#bulk { display: none; flex-wrap: wrap; align-items: center; gap: 8px; padding: 7px 16px; border-bottom: 1px solid var(--line); background: var(--accent-soft); font-size: 13px; }
+#bulk.on { display: flex; }
+#bulk b { color: var(--accent); }
+#bulk .taginput { flex: 0 1 200px; }
+#bulk select { padding: 3px 6px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
+.nav .tagbtn .nm::before { content: "# "; color: var(--muted); }
+#toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--panel); padding: 6px 14px; border-radius: 6px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#toast.on { opacity: 1; }
+</style>
+</head>
+<body class="bg-checker">
+<nav id="side">
+  <h1>Asset library</h1>
+  <div class="sub" id="built"></div>
+  <div class="label">Packs</div>
+  <div class="nav" id="packs"></div>
+  <div class="label">Your tags</div>
+  <div class="nav" id="tags"></div>
+  <div id="folders-wrap" hidden>
+    <div class="label">Folders</div>
+    <div id="crumbs"></div>
+    <div class="nav" id="folders"></div>
+  </div>
+  <div class="legend">
+    <span><i class="dot"></i>Free to use, no credit</span>
+    <span><i class="dot credit"></i>Credit needed in the game</span>
+    <span><i class="dot check"></i>Licence to check first</span>
+  </div>
+</nav>
+<div id="main">
+  <div id="bar">
+    <input id="search" type="search" placeholder="Search names and folders (e.g. sword, ui click, hex)" autocomplete="off">
+    <div class="chips" id="types"></div>
+    <input id="sample" placeholder="Font sample text" hidden>
+    <div id="bgs" title="Background behind images">Background
+      <button data-bg="checker" style="background:repeating-conic-gradient(#ccc 0 25%,#fff 0 50%) 0 0/8px 8px"></button>
+      <button data-bg="light" style="background:#f4f2ed"></button>
+      <button data-bg="dark" style="background:#2a2826"></button>
+      <button data-bg="green" style="background:#5d8a5e"></button>
+    </div>
+    <div id="count"></div>
+  </div>
+  <div id="bulk">
+    <b id="bulkn"></b>
+    <input class="taginput" id="bulkadd" list="taglist" placeholder="Add a tag to all, then Enter">
+    <select id="bulkdel"></select>
+    <button class="ibtn" id="bulkall">Select all shown</button>
+    <button class="ibtn" id="bulkclear">Clear selection</button>
+  </div>
+  <datalist id="taglist"></datalist>
+  <div id="scroll">
+    <div id="grid"></div>
+    <div id="empty">Nothing matches. Try fewer words, or another pack or type.</div>
+    <div id="more"></div>
+  </div>
+</div>
+<aside id="detail"></aside>
+<div id="toast"></div>
+<script>
+const LIB = /*__LIBRARY_DATA__*/null;
+const T = { TYPE: 0, PACK: 1, NAME: 2, FMTS: 3, SIZE: 4, W: 5, H: 6, LIC: 7 };
+const TYPE_NAMES = { image: 'Images', sound: 'Sounds', font: 'Fonts', model: '3D models' };
+const STATUS = {
+  free: ['Free to use', 'No credit needed.'],
+  credit: ['Credit needed', 'Put the credit line in the game\'s credits.'],
+  check: ['Check the licence first', 'The licence has not been read yet: do not use these in a game until it is.'],
+  none: ['No licence note', 'Add a licence note next to the pack before using it.'],
+  own: ['Loose asset', 'No licence note found next to this file.'],
+};
+const FORMAT_DIR = /^(dae|fbx|gltf|glb|obj|stl|3ds|ogg|wav|mp3)( format)?$/i;
+const SERVED = location.protocol.startsWith('http');
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// ---------- data helpers ----------
+const items = LIB.items;
+const packs = LIB.packs;
+const fileOf = (it, k = 0) => `${LIB.dirs[it[T.FMTS][k][1]]}/${it[T.NAME]}.${it[T.FMTS][k][0]}`;
+const urlOf = p => p.split('/').map(encodeURIComponent).join('/');
+const groupDirs = LIB.dirs.map(d => d.split('/').filter(s => !FORMAT_DIR.test(s)).join('/'));
+const gdir = it => groupDirs[it[T.FMTS][0][1]];
+const packRoot = p => p.key;
+const hay = items.map(it => `${it[T.NAME]} ${gdir(it)} ${it[T.TYPE]} ${TYPE_NAMES[it[T.TYPE]]} ${it[T.FMTS].map(f => f[0]).join(' ')}`.toLowerCase().replace(/[_\-]/g, ' '));
+// ---------- your tags (saved in library/tags.json through the tool's server) ----------
+const keys = items.map(it => fileOf(it));
+const keyIndex = new Map(keys.map((k, i) => [k, i]));
+let TAGS = LIB.tags || {};
+const tagsOf = i => TAGS[keys[i]] || [];
+function allTags() {
+  const n = new Map();
+  for (const k in TAGS) if (keyIndex.has(k)) for (const t of TAGS[k]) n.set(t, (n.get(t) || 0) + 1);
+  return [...n].sort((a, b) => a[0].localeCompare(b[0], undefined, { sensitivity: 'base' }));
+}
+/** The spelling already in use for a tag, so "menu" and "Menu" stay one tag. */
+function spell(t) {
+  t = t.trim().replace(/\s+/g, ' ').slice(0, 60);
+  const found = allTags().find(([x]) => x.toLowerCase() === t.toLowerCase());
+  return found ? found[0] : t;
+}
+function changeTags(list, fn) {
+  if (!SERVED) { toast('Open the page with the library tool to change tags'); return; }
+  for (const i of list) {
+    const next = [...new Set(fn(tagsOf(i)))].sort((a, b) => a.localeCompare(b));
+    if (next.length) TAGS[keys[i]] = next; else delete TAGS[keys[i]];
+  }
+  saveTags();
+  afterTagChange(list);
+}
+let saveTimer;
+function saveTags() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(async () => {
+    try {
+      const r = await fetch('api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Library': '1' }, body: JSON.stringify(TAGS) });
+      if (!r.ok) throw new Error(r.status);
+      toast('Tags saved');
+    } catch { toast('Could not save the tags: is the library tool still running?'); }
+  }, 300);
+}
+const statusOf = it => (it[T.LIC] ? (LIB.notes[it[T.LIC]].status) : packs[it[T.PACK]].status);
+const kb = n => n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(0)} KB` : `${(n / 1048576).toFixed(1)} MB`;
+
+// ---------- state (kept in the address so a refresh keeps it) ----------
+const st = { q: '', type: '', pack: -1, dir: '', tag: '', bg: 'checker', sample: '', sel: -1 };
+const picked = new Set();
+let anchor = -1;
+function readHash() {
+  const h = new URLSearchParams(location.hash.slice(1));
+  st.q = h.get('q') || ''; st.type = h.get('type') || ''; st.dir = h.get('dir') || ''; st.tag = h.get('tag') || '';
+  st.pack = h.has('pack') ? packs.findIndex(p => p.name === h.get('pack')) : -1;
+  st.bg = h.get('bg') || localStorage.getItem('lib-bg') || 'checker';
+  st.sample = localStorage.getItem('lib-sample') || '';
+}
+function writeHash() {
+  const h = new URLSearchParams();
+  if (st.q) h.set('q', st.q);
+  if (st.type) h.set('type', st.type);
+  if (st.pack >= 0) h.set('pack', packs[st.pack].name);
+  if (st.dir) h.set('dir', st.dir);
+  if (st.tag) h.set('tag', st.tag);
+  history.replaceState(null, '', '#' + h.toString());
+}
+
+// ---------- filtering ----------
+let shown = [];
+function filter() {
+  const words = st.q.toLowerCase().replace(/[_\-]/g, ' ').split(/\s+/).filter(Boolean);
+  const base = []; // matches everything but the type, for the type counts
+  for (let i = 0; i < items.length; i++) {
+    const it = items[i];
+    if (st.pack >= 0 && it[T.PACK] !== st.pack) continue;
+    if (st.dir) { const d = gdir(it); if (d !== st.dir && !d.startsWith(st.dir + '/')) continue; }
+    const tags = TAGS[keys[i]];
+    if (st.tag && !(tags && tags.includes(st.tag))) continue;
+    if (words.length) { const h = tags ? hay[i] + ' ' + tags.join(' ').toLowerCase() : hay[i]; if (!words.every(w => h.includes(w))) continue; }
+    base.push(i);
+  }
+  shown = st.type ? base.filter(i => items[i][T.TYPE] === st.type) : base;
+  const counts = { '': base.length };
+  for (const i of base) counts[items[i][T.TYPE]] = (counts[items[i][T.TYPE]] || 0) + 1;
+  return counts;
+}
+
+// ---------- side ----------
+function renderTagSide() {
+  const tags = allTags();
+  $('#tags').innerHTML = tags.length ? tags.map(([t, n]) =>
+    `<button class="tagbtn${st.tag === t ? ' on' : ''}" data-tag="${esc(t)}" title="Show only “${esc(t)}” (click again to show all)"><span class="nm">${esc(t)}</span><span class="n">${n}</span></button>`).join('')
+    : `<div class="hint" style="padding:0 8px">None yet. Open an asset and add a tag, or Ctrl+click cards to tag many at once.</div>`;
+  $('#taglist').innerHTML = tags.map(([t]) => `<option value="${esc(t)}">`).join('');
+}
+function renderSide() {
+  renderTagSide();
+  const all = `<button data-pack="-1" class="${st.pack < 0 ? 'on' : ''}"><span class="nm">All packs</span><span class="n">${items.length}</span></button>`;
+  $('#packs').innerHTML = all + packs.map((p, i) =>
+    `<button data-pack="${i}" class="${st.pack === i ? 'on' : ''}" title="${esc(p.title)}"><i class="dot ${p.status}"></i><span class="nm">${esc(p.name)}</span><span class="n">${p.count}</span></button>`).join('');
+  const wrap = $('#folders-wrap');
+  if (st.pack < 0) { wrap.hidden = true; return; }
+  wrap.hidden = false;
+  const rootDir = packRoot(packs[st.pack]);
+  const cur = st.dir || rootDir;
+  // Sub-folders of the current folder, with how many assets each holds.
+  const sub = new Map();
+  for (const it of items) {
+    if (it[T.PACK] !== st.pack) continue;
+    const d = gdir(it);
+    if (!d.startsWith(cur + '/')) continue;
+    const child = d.slice(cur.length + 1).split('/')[0];
+    sub.set(child, (sub.get(child) || 0) + 1);
+  }
+  const rel = cur.slice(rootDir.length).split('/').filter(Boolean);
+  let acc = rootDir;
+  $('#crumbs').innerHTML = `<a data-dir="">${esc(packs[st.pack].name)}</a>` + rel.map(s => { acc += '/' + s; return ` / <a data-dir="${esc(acc)}">${esc(s)}</a>`; }).join('');
+  $('#folders').innerHTML = [...sub].sort((a, b) => a[0].localeCompare(b[0], undefined, { numeric: true }))
+    .map(([s, n]) => `<button data-dir="${esc(cur + '/' + s)}"><span class="nm">${esc(s)}</span><span class="n">${n}</span></button>`).join('')
+    || '<div class="hint" style="padding:2px 8px">No sub-folders.</div>';
+}
+
+// ---------- grid ----------
+const PLAY = '<svg viewBox="0 0 24 24"><path d="M7 4v16l13-8z"/></svg>';
+const STOP = '<svg viewBox="0 0 24 24"><path d="M6 6h12v12H6z"/></svg>';
+let rendered = 0;
+const BATCH = 240;
+const fontsLoaded = new Set();
+function fontFamily(i) {
+  const fam = `libfont${i}`;
+  if (!fontsLoaded.has(i)) {
+    fontsLoaded.add(i);
+    const s = document.createElement('style');
+    s.textContent = `@font-face { font-family: ${fam}; src: url("${urlOf(fileOf(items[i]))}"); font-display: swap; }`;
+    document.head.appendChild(s);
+  }
+  return fam;
+}
+function sampleText(it) { return st.sample || it[T.NAME].replace(/[_-]/g, ' ') + ' 0123'; }
+function imgTag(it, box) {
+  const w = it[T.W], h = it[T.H];
+  const src = urlOf(fileOf(it));
+  if (w && h && Math.max(w, h) <= box / 1.5) {
+    const s = Math.max(1, Math.floor(box / Math.max(w, h)));
+    return `<img class="px" loading="lazy" src="${src}" width="${w * s}" height="${h * s}" alt="">`;
+  }
+  return `<img loading="lazy" src="${src}" alt="">`;
+}
+function cardHtml(i) {
+  const it = items[i], type = it[T.TYPE], p = packs[it[T.PACK]], s = statusOf(it);
+  const badge = s === 'credit' ? '<span class="badge credit">Credit</span>' : (s === 'check' || s === 'none') ? '<span class="badge check">Check licence</span>' : '';
+  let thumb = '', sm = '';
+  const fmts = it[T.FMTS].map(f => f[0]).join(' · ');
+  if (type === 'image') { thumb = imgTag(it, 96); sm = (it[T.W] ? `${it[T.W]}×${it[T.H]} · ` : '') + p.name; }
+  else if (type === 'sound') { thumb = `<button class="play" data-play="${i}" title="Play">${PLAY}</button><div class="dur" id="dur${i}"></div><div class="prog" id="prog${i}"></div>`; sm = `${fmts} · ${p.name}`; }
+  else if (type === 'font') { thumb = `<span style="font-family:${fontFamily(i)}">${esc(sampleText(it))}</span>`; sm = `${fmts} · ${p.name}`; }
+  else { thumb = `<canvas width="240" height="240" style="width:120px;height:120px" data-model="${i}"></canvas>`; sm = `${fmts}`; }
+  const tags = tagsOf(i);
+  const tagRow = tags.length ? `<div class="tagrow">${tags.map(t => `<span class="tg">${esc(t)}</span>`).join('')}</div>` : '';
+  return `<div class="card ${type}${st.sel === i ? ' sel' : ''}${picked.has(i) ? ' picked' : ''}" data-i="${i}" title="${esc(fileOf(it))}${tags.length ? '\nTags: ' + esc(tags.join(', ')) : ''}">${badge}<div class="thumb">${thumb}</div><div class="meta"><div class="nm">${esc(it[T.NAME])}</div><div class="sm">${esc(sm)}</div>${tagRow}</div></div>`;
+}
+function renderMore() {
+  if (rendered >= shown.length) return;
+  const end = Math.min(shown.length, rendered + BATCH);
+  const html = [];
+  for (let k = rendered; k < end; k++) html.push(cardHtml(shown[k]));
+  $('#grid').insertAdjacentHTML('beforeend', html.join(''));
+  rendered = end;
+  for (const c of $('#grid').querySelectorAll('canvas[data-model]:not([data-seen])')) { c.dataset.seen = 1; modelObserver.observe(c); }
+}
+function renderGrid() {
+  const counts = filter();
+  $('#types').innerHTML = [['', 'All'], ...Object.entries(TYPE_NAMES)].map(([t, n]) =>
+    `<button class="chip${st.type === t ? ' on' : ''}" data-type="${t}">${n} <span class="n">${counts[t] || 0}</span></button>`).join('');
+  $('#sample').hidden = !(st.type === 'font' || (counts.font && !st.type && counts.font === counts['']));
+  $('#count').textContent = `${shown.length} shown`;
+  $('#grid').innerHTML = '';
+  $('#scroll').scrollTop = 0;
+  $('#empty').style.display = shown.length ? 'none' : 'block';
+  rendered = 0;
+  renderMore();
+}
+new IntersectionObserver(e => { if (e[0].isIntersecting) renderMore(); }, { root: $('#scroll'), rootMargin: '800px' }).observe($('#more'));
+
+// ---------- sound ----------
+const audio = new Audio();
+let playing = -1;
+function setPlayIcon(i, on) {
+  const b = document.querySelector(`[data-play="${i}"]`);
+  if (b) b.innerHTML = on ? STOP : PLAY;
+  const pr = document.getElementById('prog' + i);
+  if (pr && !on) pr.style.width = 0;
+}
+function play(i) {
+  if (playing === i && !audio.paused) { audio.pause(); setPlayIcon(i, false); playing = -1; return; }
+  if (playing >= 0) setPlayIcon(playing, false);
+  playing = i;
+  audio.src = urlOf(fileOf(items[i]));
+  audio.play().catch(() => {});
+  setPlayIcon(i, true);
+}
+audio.addEventListener('timeupdate', () => {
+  const pr = document.getElementById('prog' + playing);
+  if (pr && audio.duration) pr.style.width = `${(audio.currentTime / audio.duration) * 100}%`;
+});
+audio.addEventListener('loadedmetadata', () => {
+  const d = document.getElementById('dur' + playing);
+  if (d) d.textContent = `${audio.duration.toFixed(1)} s`;
+});
+audio.addEventListener('ended', () => { setPlayIcon(playing, false); playing = -1; });
+
+// ---------- detail ----------
+let viewer = null;
+function openDetail(i) {
+  st.sel = i;
+  document.querySelectorAll('.card.sel').forEach(c => c.classList.remove('sel'));
+  const card = document.querySelector(`.card[data-i="${i}"]`);
+  if (card) { card.classList.add('sel'); card.scrollIntoView({ block: 'nearest' }); }
+  const it = items[i], p = packs[it[T.PACK]], type = it[T.TYPE];
+  const note = it[T.LIC] ? LIB.notes[it[T.LIC]] : null;
+  const lic = note || p;
+  const s = statusOf(it);
+  const path = fileOf(it);
+  let big = '';
+  if (type === 'image') big = imgTag(it, 300);
+  else if (type === 'sound') big = `<audio controls autoplay src="${urlOf(path)}"></audio>`;
+  else if (type === 'font') {
+    const f = fontFamily(i);
+    big = `<div class="fontshow" style="font-family:${f}">` + [48, 32, 22, 16, 12].map(px => `<div style="font-size:${px}px">${esc(st.sample || 'The quick brown fox jumps over the lazy dog')}</div>`).join('') +
+      `<div style="font-size:18px">ABCDEFGHIJKLMNOPQRSTUVWXYZ<br>abcdefghijklmnopqrstuvwxyz<br>0123456789 !?.,:;'"()[]&amp;%+-=/</div></div>`;
+  } else big = SERVED ? '<canvas id="viewer" width="752" height="640"></canvas>' : '<div class="nopv">3D preview works only when the page is opened with the library tool<br>(node tools/library/library.mjs library)</div>';
+  if (type === 'sound') { audio.pause(); if (playing >= 0) setPlayIcon(playing, false); playing = -1; }
+  const fm = it[T.FMTS].map((f, k) => `<a href="${urlOf(fileOf(it, k))}" target="_blank" title="${esc(fileOf(it, k))}">${f[0]}</a>`).join('');
+  $('#detail').innerHTML = `
+    <div class="head"><button class="ibtn" data-step="-1" title="Previous (left arrow)">‹</button><button class="ibtn" data-step="1" title="Next (right arrow)">›</button><h2>${esc(it[T.NAME])}</h2><button class="ibtn" data-close title="Close (Esc)">✕</button></div>
+    <div class="big">${big}</div>
+    ${type === 'model' && SERVED ? '<div class="hint">Drag to turn it. Shown in its plain colours, without textures.</div>' : ''}
+    <div class="sect"><h3>File</h3>
+      <div class="copyline"><code class="mono">${esc('library/' + path)}</code><button class="ibtn" data-copy="${esc('library/' + path)}">Copy</button></div>
+      <div class="kv" style="margin-top:8px">
+        <span>Formats</span><span class="fmts">${fm}</span>
+        <span>Size</span><span>${kb(it[T.SIZE])}</span>
+        ${it[T.W] ? `<span>Pixels</span><span>${it[T.W]} × ${it[T.H]}</span>` : ''}
+        <span>Pack</span><span>${esc(p.title)}${p.author ? ` <span style="color:var(--muted)">by ${esc(p.author)}</span>` : ''}</span>
+      </div></div>
+    <div class="sect"><h3>Your tags</h3><div class="tagedit" id="tagedit">${tagEditorHtml(i)}</div></div>
+    <div class="sect"><h3>Licence</h3>
+      <div class="lic ${s}"><b class="${s}-b">${STATUS[s][0]}</b>
+        ${lic.licence ? `<p>${esc(lic.licence)}</p>` : `<p>${STATUS[s][1]}</p>`}
+        ${lic.limits ? `<p><b style="display:inline">Limits:</b> ${esc(lic.limits)}</p>` : ''}
+        ${lic.note ? `<p>${esc(lic.note)}</p>` : ''}
+        ${lic.creditLine ? `<div class="copyline"><code>${esc(lic.creditLine)}</code><button class="ibtn" data-copy="${esc(lic.creditLine)}">Copy</button></div>` : ''}
+      </div>
+      <div class="kv" style="margin-top:8px">
+        ${lic.source ? `<span>Source</span><span>${linkify(lic.source)}</span>` : ''}
+        ${p.licenceFile ? `<span>Note</span><span><a href="${urlOf(p.licenceFile)}" target="_blank">${esc(p.licenceFile.split('/').pop())}</a></span>` : ''}
+        ${it[T.LIC] ? `<span>Note</span><span><a href="${urlOf(it[T.LIC])}" target="_blank">${esc(it[T.LIC].split('/').pop())}</a></span>` : ''}
+      </div></div>`;
+  $('#detail').classList.add('open');
+  if (viewer) { viewer.stop(); viewer = null; }
+  if (type === 'model' && SERVED) viewer = startViewer($('#viewer'), it);
+}
+function tagEditorHtml(i) {
+  const chips = tagsOf(i).map(t => `<span class="tg">${esc(t)}<button data-untag="${esc(t)}" title="Remove this tag">×</button></span>`).join('');
+  return chips + (SERVED ? '<input class="taginput" id="tagadd" list="taglist" placeholder="Add a tag, then Enter">'
+    : '<span class="hint" style="padding:0">Open the page with the library tool to change tags.</span>');
+}
+/** Shows new tags on the cards, the side list and the open asset, without redrawing the grid. */
+function afterTagChange(list) {
+  for (const i of list) {
+    const c = document.querySelector(`.card[data-i="${i}"]`);
+    if (!c) continue;
+    const tags = tagsOf(i);
+    c.querySelector('.tagrow')?.remove();
+    if (tags.length) c.querySelector('.meta').insertAdjacentHTML('beforeend', `<div class="tagrow">${tags.map(t => `<span class="tg">${esc(t)}</span>`).join('')}</div>`);
+    c.title = fileOf(items[i]) + (tags.length ? '\nTags: ' + tags.join(', ') : '');
+  }
+  if (st.tag && !allTags().some(([t]) => t === st.tag)) { st.tag = ''; writeHash(); }
+  renderTagSide();
+  renderBulk();
+  if (st.sel >= 0 && list.includes(st.sel)) {
+    const ed = $('#tagedit');
+    if (ed) { ed.innerHTML = tagEditorHtml(st.sel); $('#tagadd')?.focus(); }
+  }
+}
+
+// ---------- picking many cards (Ctrl+click, Shift+click) ----------
+function togglePick(i, range) {
+  if (range && anchor >= 0) {
+    const a = shown.indexOf(anchor), b = shown.indexOf(i);
+    if (a >= 0 && b >= 0) for (let k = Math.min(a, b); k <= Math.max(a, b); k++) picked.add(shown[k]);
+  } else if (picked.has(i)) picked.delete(i); else picked.add(i);
+  anchor = i;
+  refreshPicked();
+}
+function refreshPicked() {
+  document.querySelectorAll('.card').forEach(c => c.classList.toggle('picked', picked.has(+c.dataset.i)));
+  renderBulk();
+}
+function renderBulk() {
+  const bar = $('#bulk');
+  bar.classList.toggle('on', picked.size > 0);
+  if (!picked.size) return;
+  $('#bulkn').textContent = `${picked.size} selected`;
+  const n = new Map();
+  for (const i of picked) for (const t of tagsOf(i)) n.set(t, (n.get(t) || 0) + 1);
+  $('#bulkdel').innerHTML = `<option value="">Remove a tag from all…</option>` +
+    [...n].sort().map(([t, c]) => `<option value="${esc(t)}">${esc(t)} (${c})</option>`).join('');
+  $('#bulkdel').hidden = !n.size;
+}
+function linkify(s) {
+  return esc(s).replace(/https?:\/\/[^\s)]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u}</a>`);
+}
+function closeDetail() {
+  $('#detail').classList.remove('open'); $('#detail').innerHTML = '';
+  if (viewer) { viewer.stop(); viewer = null; }
+  document.querySelectorAll('.card.sel').forEach(c => c.classList.remove('sel'));
+  st.sel = -1;
+}
+function step(d) {
+  const k = shown.indexOf(st.sel);
+  if (k < 0) return;
+  const n = k + d;
+  if (n < 0 || n >= shown.length) return;
+  while (n >= rendered) renderMore();
+  openDetail(shown[n]);
+}
+function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('on'), 1400); }
+
+// ---------- 3D: tiny glTF / OBJ reader and WebGL drawer ----------
+const M4 = {
+  mul(a, b) { const o = new Float32Array(16); for (let c = 0; c < 4; c++) for (let r = 0; r < 4; r++) { let s = 0; for (let k = 0; k < 4; k++) s += a[k * 4 + r] * b[c * 4 + k]; o[c * 4 + r] = s; } return o; },
+  ident() { const o = new Float32Array(16); o[0] = o[5] = o[10] = o[15] = 1; return o; },
+  trs(t = [0, 0, 0], q = [0, 0, 0, 1], s = [1, 1, 1]) {
+    const [x, y, z, w] = q, o = new Float32Array(16);
+    o[0] = (1 - 2 * (y * y + z * z)) * s[0]; o[1] = 2 * (x * y + z * w) * s[0]; o[2] = 2 * (x * z - y * w) * s[0];
+    o[4] = 2 * (x * y - z * w) * s[1]; o[5] = (1 - 2 * (x * x + z * z)) * s[1]; o[6] = 2 * (y * z + x * w) * s[1];
+    o[8] = 2 * (x * z + y * w) * s[2]; o[9] = 2 * (y * z - x * w) * s[2]; o[10] = (1 - 2 * (x * x + y * y)) * s[2];
+    o[12] = t[0]; o[13] = t[1]; o[14] = t[2]; o[15] = 1; return o;
+  },
+  persp(fov, asp, n, f) { const t = 1 / Math.tan(fov / 2), o = new Float32Array(16); o[0] = t / asp; o[5] = t; o[10] = (f + n) / (n - f); o[11] = -1; o[14] = 2 * f * n / (n - f); return o; },
+  rotX(a) { const o = M4.ident(), c = Math.cos(a), s = Math.sin(a); o[5] = c; o[6] = s; o[9] = -s; o[10] = c; return o; },
+  rotY(a) { const o = M4.ident(), c = Math.cos(a), s = Math.sin(a); o[0] = c; o[2] = -s; o[8] = s; o[10] = c; return o; },
+};
+const CT = { 5120: Int8Array, 5121: Uint8Array, 5122: Int16Array, 5123: Uint16Array, 5125: Uint32Array, 5126: Float32Array };
+const NC = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 };
+
+async function fetchBuf(url) { const r = await fetch(url); if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); }
+function readAccessor(g, bufs, i) {
+  const a = g.accessors[i], bv = g.bufferViews[a.bufferView], Arr = CT[a.componentType], n = NC[a.type];
+  const buf = bufs[bv.buffer], off = (bv.byteOffset || 0) + (a.byteOffset || 0);
+  const stride = bv.byteStride || Arr.BYTES_PER_ELEMENT * n;
+  const out = new (Arr === Float32Array ? Float32Array : Uint32Array)(a.count * n);
+  const dv = new DataView(buf);
+  const get = { 5120: 'getInt8', 5121: 'getUint8', 5122: 'getInt16', 5123: 'getUint16', 5125: 'getUint32', 5126: 'getFloat32' }[a.componentType];
+  for (let k = 0; k < a.count; k++) for (let c = 0; c < n; c++) out[k * n + c] = dv[get](off + k * stride + c * Arr.BYTES_PER_ELEMENT, true);
+  return out;
+}
+async function loadGltf(url) {
+  const raw = await fetchBuf(url);
+  let g, bufs = [];
+  const head = new DataView(raw);
+  if (head.getUint32(0, true) === 0x46546c67) { // "glTF" binary
+    let off = 12;
+    while (off < raw.byteLength) {
+      const len = head.getUint32(off, true), type = head.getUint32(off + 4, true);
+      if (type === 0x4e4f534a) g = JSON.parse(new TextDecoder().decode(new Uint8Array(raw, off + 8, len)));
+      else if (type === 0x004e4942) bufs[0] = raw.slice(off + 8, off + 8 + len);
+      off += 8 + len;
+    }
+  } else g = JSON.parse(new TextDecoder().decode(raw));
+  const base = url.slice(0, url.lastIndexOf('/') + 1);
+  for (let b = 0; b < (g.buffers || []).length; b++) {
+    if (bufs[b] && !g.buffers[b].uri) continue;
+    const u = g.buffers[b].uri;
+    bufs[b] = await fetchBuf(u.startsWith('data:') ? u : base + u);
+  }
+  const prims = [];
+  const visit = (ni, parent) => {
+    const nd = g.nodes[ni];
+    const local = nd.matrix ? new Float32Array(nd.matrix) : M4.trs(nd.translation, nd.rotation, nd.scale);
+    const m = M4.mul(parent, local);
+    if (nd.mesh !== undefined) for (const pr of g.meshes[nd.mesh].primitives) {
+      if (pr.mode !== undefined && pr.mode !== 4) continue;
+      const pos = readAccessor(g, bufs, pr.attributes.POSITION);
+      const nrm = pr.attributes.NORMAL !== undefined ? readAccessor(g, bufs, pr.attributes.NORMAL) : null;
+      const idx = pr.indices !== undefined ? readAccessor(g, bufs, pr.indices) : null;
+      const mat = pr.material !== undefined ? g.materials[pr.material] : null;
+      const col = mat?.pbrMetallicRoughness?.baseColorFactor || [0.8, 0.8, 0.8, 1];
+      prims.push(bake(pos, nrm, idx, m, col));
+    }
+    for (const c of nd.children || []) visit(c, m);
+  };
+  const scene = g.scenes ? g.scenes[g.scene || 0].nodes : g.nodes.map((_, i) => i);
+  for (const n of scene) visit(n, M4.ident());
+  return prims;
+}
+/** Applies the node's placement, and unrolls indices so missing normals can be made per face. */
+function bake(pos, nrm, idx, m, col) {
+  const count = idx ? idx.length : pos.length / 3;
+  const P = new Float32Array(count * 3), N = new Float32Array(count * 3);
+  for (let k = 0; k < count; k++) {
+    const v = idx ? idx[k] : k, x = pos[v * 3], y = pos[v * 3 + 1], z = pos[v * 3 + 2];
+    P[k * 3] = m[0] * x + m[4] * y + m[8] * z + m[12];
+    P[k * 3 + 1] = m[1] * x + m[5] * y + m[9] * z + m[13];
+    P[k * 3 + 2] = m[2] * x + m[6] * y + m[10] * z + m[14];
+    if (nrm) {
+      const a = nrm[v * 3], b = nrm[v * 3 + 1], c = nrm[v * 3 + 2];
+      const nx = m[0] * a + m[4] * b + m[8] * c, ny = m[1] * a + m[5] * b + m[9] * c, nz = m[2] * a + m[6] * b + m[10] * c;
+      const l = Math.hypot(nx, ny, nz) || 1;
+      N[k * 3] = nx / l; N[k * 3 + 1] = ny / l; N[k * 3 + 2] = nz / l;
+    }
+  }
+  if (!nrm) faceNormals(P, N);
+  return { P, N, col };
+}
+function faceNormals(P, N) {
+  for (let k = 0; k + 8 < P.length; k += 9) {
+    const ux = P[k + 3] - P[k], uy = P[k + 4] - P[k + 1], uz = P[k + 5] - P[k + 2];
+    const vx = P[k + 6] - P[k], vy = P[k + 7] - P[k + 1], vz = P[k + 8] - P[k + 2];
+    let nx = uy * vz - uz * vy, ny = uz * vx - ux * vz, nz = ux * vy - uy * vx;
+    const l = Math.hypot(nx, ny, nz) || 1; nx /= l; ny /= l; nz /= l;
+    for (let j = 0; j < 9; j += 3) { N[k + j] = nx; N[k + j + 1] = ny; N[k + j + 2] = nz; }
+  }
+}
+async function loadObj(url) {
+  const text = new TextDecoder().decode(await fetchBuf(url));
+  const base = url.slice(0, url.lastIndexOf('/') + 1);
+  const colors = {};
+  const lib = text.match(/^mtllib\s+(.+)$/m);
+  if (lib) try {
+    let cur = null;
+    for (const l of new TextDecoder().decode(await fetchBuf(base + urlOf(lib[1].trim()))).split(/\r?\n/)) {
+      const t = l.trim().split(/\s+/);
+      if (t[0] === 'newmtl') cur = t.slice(1).join(' ');
+      else if (t[0] === 'Kd' && cur) colors[cur] = [+t[1], +t[2], +t[3], 1];
+    }
+  } catch { /* no colours */ }
+  const v = [], vn = [], groups = new Map();
+  let g = null;
+  const groupFor = name => { if (!groups.has(name)) groups.set(name, { p: [], n: [], col: colors[name] || [0.8, 0.8, 0.8, 1], flat: false }); return groups.get(name); };
+  g = groupFor('');
+  for (const l of text.split(/\r?\n/)) {
+    const t = l.trim().split(/\s+/);
+    if (t[0] === 'v') v.push([+t[1], +t[2], +t[3]]);
+    else if (t[0] === 'vn') vn.push([+t[1], +t[2], +t[3]]);
+    else if (t[0] === 'usemtl') g = groupFor(t.slice(1).join(' '));
+    else if (t[0] === 'f') {
+      const cs = t.slice(1).map(s => { const [a, , c] = s.split('/'); const ai = +a, ci = c ? +c : 0; return [ai < 0 ? v.length + ai : ai - 1, ci ? (ci < 0 ? vn.length + ci : ci - 1) : -1]; });
+      for (let k = 1; k + 1 < cs.length; k++) for (const c of [cs[0], cs[k], cs[k + 1]]) {
+        g.p.push(...v[c[0]]);
+        if (c[1] >= 0 && vn[c[1]]) g.n.push(...vn[c[1]]); else { g.n.push(0, 0, 0); g.flat = true; }
+      }
+    }
+  }
+  return [...groups.values()].filter(x => x.p.length).map(x => {
+    const P = new Float32Array(x.p), N = new Float32Array(x.n);
+    if (x.flat) faceNormals(P, N);
+    return { P, N, col: x.col };
+  });
+}
+const modelCache = new Map();
+function loadModel(it) {
+  const k = it[T.FMTS].findIndex(f => f[0] === 'glb' || f[0] === 'gltf' || f[0] === 'obj');
+  if (k < 0) return Promise.resolve(null);
+  const url = urlOf(fileOf(it, k));
+  if (!modelCache.has(url)) {
+    if (modelCache.size > 200) modelCache.delete(modelCache.keys().next().value);
+    modelCache.set(url, (it[T.FMTS][k][0] === 'obj' ? loadObj(url) : loadGltf(url)).then(fit).catch(() => null));
+  }
+  return modelCache.get(url);
+}
+function fit(prims) {
+  if (!prims.length) return null;
+  const lo = [Infinity, Infinity, Infinity], hi = [-Infinity, -Infinity, -Infinity];
+  for (const p of prims) for (let k = 0; k < p.P.length; k += 3) for (let c = 0; c < 3; c++) { lo[c] = Math.min(lo[c], p.P[k + c]); hi[c] = Math.max(hi[c], p.P[k + c]); }
+  const center = lo.map((l, c) => (l + hi[c]) / 2), radius = Math.hypot(hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]) / 2 || 1;
+  return { prims, center, radius };
+}
+
+const VS = `#version 300 es
+in vec3 p; in vec3 n; uniform mat4 M, PV; out vec3 vn;
+void main() { vn = mat3(M) * n; gl_Position = PV * M * vec4(p, 1.0); }`;
+const FS = `#version 300 es
+precision mediump float; in vec3 vn; uniform vec4 col; out vec4 o;
+void main() {
+  vec3 N = normalize(vn); vec3 L = normalize(vec3(0.5, 0.9, 0.6));
+  float d = max(dot(N, L), 0.0); float hemi = 0.5 + 0.5 * N.y;
+  vec3 c = col.rgb * (0.32 + 0.25 * hemi + 0.62 * d);
+  o = vec4(pow(c, vec3(1.0 / 1.15)), 1.0);
+}`;
+function makeDrawer(canvas) {
+  const gl = canvas.getContext('webgl2', { antialias: true, preserveDrawingBuffer: true, alpha: true, premultipliedAlpha: false });
+  if (!gl) return null;
+  const sh = (t, s) => { const x = gl.createShader(t); gl.shaderSource(x, s); gl.compileShader(x); return x; };
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS)); gl.linkProgram(prog);
+  const loc = { p: gl.getAttribLocation(prog, 'p'), n: gl.getAttribLocation(prog, 'n'), M: gl.getUniformLocation(prog, 'M'), PV: gl.getUniformLocation(prog, 'PV'), col: gl.getUniformLocation(prog, 'col') };
+  const uploaded = new WeakMap();
+  function upload(model) {
+    if (uploaded.has(model)) return uploaded.get(model);
+    const parts = model.prims.map(pr => {
+      const vao = gl.createVertexArray(); gl.bindVertexArray(vao);
+      for (const [arr, l] of [[pr.P, loc.p], [pr.N, loc.n]]) {
+        const b = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, b); gl.bufferData(gl.ARRAY_BUFFER, arr, gl.STATIC_DRAW);
+        gl.enableVertexAttribArray(l); gl.vertexAttribPointer(l, 3, gl.FLOAT, false, 0, 0);
+      }
+      return { vao, count: pr.P.length / 3, col: pr.col };
+    });
+    uploaded.set(model, parts);
+    return parts;
+  }
+  return {
+    gl,
+    draw(model, yaw, pitch, keep) {
+      gl.viewport(0, 0, canvas.width, canvas.height);
+      gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+      gl.enable(gl.DEPTH_TEST);
+      gl.useProgram(prog);
+      const s = 1 / model.radius, c = model.center;
+      const center = M4.trs([-c[0] * s, -c[1] * s, -c[2] * s], undefined, [s, s, s]);
+      const M = M4.mul(M4.mul(M4.rotX(pitch), M4.rotY(yaw)), center);
+      const PV = M4.mul(M4.persp(0.6, canvas.width / canvas.height, 0.1, 20), M4.trs([0, 0, -3.6]));
+      gl.uniformMatrix4fv(loc.M, false, M); gl.uniformMatrix4fv(loc.PV, false, PV);
+      const parts = upload(model);
+      for (const pt of parts) { gl.uniform4fv(loc.col, pt.col); gl.bindVertexArray(pt.vao); gl.drawArrays(gl.TRIANGLES, 0, pt.count); }
+      if (!keep) { // thumbnails: free the GPU copy, the picture stays
+        for (const pt of parts) gl.deleteVertexArray(pt.vao);
+        uploaded.delete(model);
+      }
+    },
+  };
+}
+// One hidden drawer makes every thumbnail, one at a time.
+const thumbCanvas = document.createElement('canvas'); thumbCanvas.width = thumbCanvas.height = 240;
+let thumbDrawer = null;
+const thumbQueue = [];
+let thumbBusy = false;
+async function pumpThumbs() {
+  if (thumbBusy) return;
+  thumbBusy = true;
+  while (thumbQueue.length) {
+    const c = thumbQueue.shift();
+    if (!c.isConnected) continue;
+    const it = items[+c.dataset.model];
+    const model = await loadModel(it);
+    const ctx = c.getContext('2d');
+    if (!model) { ctx.fillStyle = getComputedStyle(document.body).getPropertyValue('--muted'); ctx.font = '22px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('No preview', 120, 125); continue; }
+    thumbDrawer = thumbDrawer || makeDrawer(thumbCanvas);
+    if (!thumbDrawer) break;
+    thumbDrawer.draw(model, -0.7, 0.45, false);
+    ctx.clearRect(0, 0, 240, 240); ctx.drawImage(thumbCanvas, 0, 0);
+  }
+  thumbBusy = false;
+}
+const modelObserver = new IntersectionObserver(es => {
+  for (const e of es) if (e.isIntersecting) {
+    modelObserver.unobserve(e.target);
+    if (!SERVED) { const ctx = e.target.getContext('2d'); ctx.fillStyle = '#888'; ctx.font = '20px Segoe UI'; ctx.textAlign = 'center'; ctx.fillText('Open with the tool', 120, 115); ctx.fillText('to see 3D', 120, 142); continue; }
+    thumbQueue.push(e.target);
+  }
+  pumpThumbs();
+}, { root: $('#scroll'), rootMargin: '300px' });
+
+function startViewer(canvas, it) {
+  let yaw = -0.7, pitch = 0.45, alive = true, drag = null, model = null, auto = true;
+  const drawer = makeDrawer(canvas);
+  loadModel(it).then(m => { model = m; if (!m) canvas.replaceWith(Object.assign(document.createElement('div'), { className: 'nopv', textContent: 'No preview for this format.' })); });
+  const frame = () => {
+    if (!alive) return;
+    if (model && drawer) { if (auto && !drag) yaw += 0.006; drawer.draw(model, yaw, pitch, true); }
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  canvas.addEventListener('pointerdown', e => { drag = [e.clientX, e.clientY, yaw, pitch]; auto = false; canvas.setPointerCapture(e.pointerId); canvas.style.cursor = 'grabbing'; });
+  canvas.addEventListener('pointermove', e => { if (!drag) return; yaw = drag[2] + (e.clientX - drag[0]) * 0.01; pitch = Math.max(-1.5, Math.min(1.5, drag[3] + (e.clientY - drag[1]) * 0.01)); });
+  canvas.addEventListener('pointerup', () => { drag = null; canvas.style.cursor = ''; });
+  return { stop() { alive = false; drawer?.gl.getExtension('WEBGL_lose_context')?.loseContext(); } };
+}
+
+// ---------- events ----------
+let qTimer;
+$('#search').addEventListener('input', e => { clearTimeout(qTimer); qTimer = setTimeout(() => { st.q = e.target.value.trim(); writeHash(); renderGrid(); }, 150); });
+$('#sample').addEventListener('input', e => {
+  st.sample = e.target.value; localStorage.setItem('lib-sample', st.sample);
+  document.querySelectorAll('.card.font').forEach(c => { c.querySelector('.thumb span').textContent = sampleText(items[+c.dataset.i]); });
+});
+$('#types').addEventListener('click', e => { const b = e.target.closest('[data-type]'); if (!b) return; st.type = b.dataset.type; writeHash(); renderGrid(); });
+$('#packs').addEventListener('click', e => { const b = e.target.closest('[data-pack]'); if (!b) return; st.pack = +b.dataset.pack; st.dir = ''; writeHash(); renderSide(); renderGrid(); });
+$('#side').addEventListener('click', e => { const b = e.target.closest('[data-dir]'); if (!b) return; st.dir = b.dataset.dir; writeHash(); renderSide(); renderGrid(); });
+$('#bgs').addEventListener('click', e => { const b = e.target.closest('[data-bg]'); if (!b) return; setBg(b.dataset.bg); });
+function setBg(bg) { st.bg = bg; localStorage.setItem('lib-bg', bg); document.body.className = 'bg-' + bg; document.querySelectorAll('#bgs button').forEach(b => b.classList.toggle('on', b.dataset.bg === bg)); }
+$('#grid').addEventListener('click', e => {
+  const pb = e.target.closest('[data-play]');
+  if (pb) { e.stopPropagation(); play(+pb.dataset.play); return; }
+  const c = e.target.closest('.card'); if (!c) return;
+  if (e.ctrlKey || e.metaKey || e.shiftKey) { e.preventDefault(); togglePick(+c.dataset.i, e.shiftKey); return; }
+  anchor = +c.dataset.i;
+  openDetail(+c.dataset.i);
+});
+$('#tags').addEventListener('click', e => {
+  const b = e.target.closest('[data-tag]'); if (!b) return;
+  st.tag = st.tag === b.dataset.tag ? '' : b.dataset.tag; writeHash(); renderTagSide(); renderGrid();
+});
+const splitTags = v => v.split(',').map(spell).filter(Boolean);
+$('#detail').addEventListener('keydown', e => {
+  if (e.target.id !== 'tagadd' || e.key !== 'Enter') return;
+  const add = splitTags(e.target.value);
+  if (add.length && st.sel >= 0) changeTags([st.sel], ts => [...ts, ...add]);
+});
+$('#bulkadd').addEventListener('keydown', e => {
+  if (e.key !== 'Enter') return;
+  const add = splitTags(e.target.value);
+  if (!add.length) return;
+  changeTags([...picked], ts => [...ts, ...add]);
+  e.target.value = '';
+  toast(`Tagged ${picked.size} asset${picked.size > 1 ? 's' : ''}`);
+});
+$('#bulkdel').addEventListener('change', e => {
+  const t = e.target.value; if (!t) return;
+  changeTags([...picked], ts => ts.filter(x => x !== t));
+});
+$('#bulkall').addEventListener('click', () => { for (const i of shown) picked.add(i); refreshPicked(); });
+$('#bulkclear').addEventListener('click', () => { picked.clear(); refreshPicked(); });
+$('#detail').addEventListener('click', e => {
+  if (e.target.closest('[data-close]')) return closeDetail();
+  const u = e.target.closest('[data-untag]');
+  if (u) return changeTags([st.sel], ts => ts.filter(x => x !== u.dataset.untag));
+  const s = e.target.closest('[data-step]'); if (s) return step(+s.dataset.step);
+  const c = e.target.closest('[data-copy]');
+  if (c) navigator.clipboard.writeText(c.dataset.copy).then(() => toast('Copied'), () => toast('Could not copy'));
+});
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input')) { if (e.key === 'Escape') e.target.blur(); return; }
+  if (e.key === 'Escape') { if (picked.size) { picked.clear(); refreshPicked(); } else closeDetail(); }
+  else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') { if (st.sel >= 0) { e.preventDefault(); step(1); } }
+  else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { if (st.sel >= 0) { e.preventDefault(); step(-1); } }
+  else if (e.key === '/') { e.preventDefault(); $('#search').focus(); }
+});
+
+// ---------- start ----------
+function start() {
+  readHash();
+  $('#search').value = st.q;
+  $('#sample').value = st.sample;
+  setBg(st.bg);
+  renderSide();
+  renderGrid();
+}
+$('#built').textContent = `${items.length} assets · built ${new Date(LIB.built).toLocaleString()}`;
+window.addEventListener('hashchange', start);
+start();
+// Tags may have changed since the page was built: take the saved ones.
+if (SERVED) fetch('api/tags', { cache: 'no-store' }).then(r => r.ok ? r.json() : null).then(t => {
+  if (!t || JSON.stringify(t) === JSON.stringify(TAGS)) return;
+  TAGS = t; renderTagSide(); renderGrid();
+}).catch(() => {});
+</script>
+</body>
+</html>

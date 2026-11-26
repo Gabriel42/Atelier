@@ -26,9 +26,13 @@ pieces shared by his games. See `README.md` for what each tool does.
   to `C:\Users\gabri\.claude\skills\<name>\SKILL.md`.
 
 ## Layout
+- `tools/menu/menu.mjs` – the main menu (pick a game, run a tool on it); `atelier.cmd`
+  starts it with a double-click
 - `tools/atlas/atlas.mjs` – the Code Atlas generator (parses GDScript, links calls and
   signals, merges explanations); `tools/atlas/page.html` – the page it fills in (one
   self-contained file: styles, script, data)
 - `tools/itch/itch.mjs` – the itch.io exporter (builds the game's export presets with
   headless Godot into `build/itch/`, uploads with butler; the page is in the game's `itch.json`)
+- `tools/library/library.mjs` – the library visualizer (scans `library/`, writes
+  `library/index.html` from `tools/library/page.html`, serves it on localhost:4321)
 - `skills/atlas/SKILL.md` – the `/atlas` skill; `skills/itch/SKILL.md` – the `/itch` skill
